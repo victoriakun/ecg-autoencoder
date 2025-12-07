@@ -1,15 +1,14 @@
 # Thesis notes - personal documentation (not for GitHub)
 thesis_notes/
 
-# Claude Code files
-.claude/
-CLAUDE.md
-
 # Word document source
 PYTHON_CODE_FOR_WORD.txt
 
 # Results folder
 results/
+
+# Evaluation plots (large PNG files)
+evaluation_plots/
 
 # Python virtual environment
 venv/
@@ -39,3 +38,7 @@ archive/
 
 # Jupyter notebooks checkpoints
 .ipynb_checkpoints/
+
+# Claude Code files
+.claude/
+CLAUDE.md
