@@ -20,12 +20,11 @@ This project implements an autoencoder-based approach to detect cardiac arrhythm
 ecg_ae_project/
 ├── config.py                 # Configuration parameters
 ├── preprocess.py             # Signal preprocessing (filtering, normalization)
-├── models.py                 # Autoencoder architectures (Conv, Dense, VAE)
+├── models.py                 # Autoencoder architecture
 ├── dataset.py                # Dataset building with labels
 ├── train_mitbih.py           # Main training script
 ├── evaluate.py               # Evaluation metrics
 ├── visualize.py              # Visualization tools
-├── requirements.txt          # Dependencies
 └── evaluation_plots/         # Generated evaluation figures
 ```
 
