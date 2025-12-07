@@ -1,0 +1,41 @@
+# Thesis notes - personal documentation (not for GitHub)
+thesis_notes/
+
+# Claude Code files
+.claude/
+CLAUDE.md
+
+# Word document source
+PYTHON_CODE_FOR_WORD.txt
+
+# Results folder
+results/
+
+# Python virtual environment
+venv/
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data files (too large for GitHub)
+data/
+*.npy
+
+# Model checkpoints (too large for GitHub)
+models/*.pt
+
+# Archive folder
+archive/
+
+# macOS system files
+.DS_Store
+
+# IDE settings
+.idea/
+.vscode/
+*.swp
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
