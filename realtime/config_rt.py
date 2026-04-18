@@ -25,7 +25,7 @@ class RealtimeConfig:
     warmup_min: int = 60
     inference_workers: int = 2
     queue_maxsize: int = 8
-    model_path: str = "models/ecg_autoencoder.pt"
+    model_path: str = "models/convae_plus.pt"
     calibration_path: str = "models/ecg_autoencoder.calibration.json"
     records: tuple[str, ...] = ("100", "208", "222")
 

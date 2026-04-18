@@ -27,9 +27,24 @@ class InferenceResult:
 
 
 def load_model(path: Path, build_fn) -> nn.Module:
-    """Load trained weights into the model returned by `build_fn()`."""
-    model = build_fn()
-    state = torch.load(path, map_location="cpu")
+    """Load trained weights into the model returned by `build_fn()`.
+
+    If the checkpoint stores `latent_dim` / `input_dim` at the top level,
+    pass them as kwargs to `build_fn` so architectures that differ only in
+    those hyperparameters are reconstructed correctly.
+    """
+    ckpt = torch.load(path, map_location="cpu")
+    kwargs = {}
+    if isinstance(ckpt, dict):
+        for k in ("input_dim", "latent_dim"):
+            if k in ckpt and isinstance(ckpt[k], int):
+                kwargs[k] = ckpt[k]
+    try:
+        model = build_fn(**kwargs)
+    except TypeError:
+        model = build_fn()
+
+    state = ckpt
     if isinstance(state, dict):
         for key in ("state_dict", "model_state_dict"):
             if key in state:
