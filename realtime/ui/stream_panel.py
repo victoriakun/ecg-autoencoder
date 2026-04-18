@@ -6,8 +6,8 @@ from dataclasses import dataclass
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from realtime.detector import DetectionResult
@@ -55,12 +55,31 @@ class StreamPanel(QWidget):
         layout = QVBoxLayout(self)
 
         header = QHBoxLayout()
-        header.addWidget(QLabel(f"Patient {self._patient_id}"))
-        self._status = QLabel("status: ● warmup")
-        self._status.setStyleSheet("color: grey")
+        title = QLabel(f"Patient {self._patient_id}")
+        title.setStyleSheet("font-weight: bold; font-size: 13pt;")
+        header.addWidget(title)
+        self._status = QLabel("● WARMUP")
+        f = QFont()
+        f.setPointSize(14)
+        f.setBold(True)
+        self._status.setFont(f)
+        self._status.setStyleSheet("color: grey; padding: 4px 10px;")
         header.addStretch()
         header.addWidget(self._status)
         layout.addLayout(header)
+
+        self._alert_banner = QLabel("")
+        self._alert_banner.setAlignment(Qt.AlignCenter)
+        self._alert_banner.setFont(f)
+        self._alert_banner.setStyleSheet(
+            "background: transparent; color: transparent; padding: 6px;"
+        )
+        self._alert_banner.setFixedHeight(34)
+        layout.addWidget(self._alert_banner)
+
+        self._banner_timer = QTimer(self)
+        self._banner_timer.setSingleShot(True)
+        self._banner_timer.timeout.connect(self._clear_banner)
 
         self._raw_plot = pg.PlotWidget(title="ECG (raw vs reconstruction)")
         self._raw_curve = self._raw_plot.plot(pen=pg.mkPen("#1f77b4"))
@@ -75,6 +94,12 @@ class StreamPanel(QWidget):
         )
         self._res_plot.addItem(self._thr_line)
         layout.addWidget(self._res_plot)
+
+    def _clear_banner(self) -> None:
+        self._alert_banner.setText("")
+        self._alert_banner.setStyleSheet(
+            "background: transparent; color: transparent; padding: 6px;"
+        )
 
     def on_window(self, r: InferenceResult) -> None:
         if r.patient_id != self._patient_id:
@@ -95,8 +120,10 @@ class StreamPanel(QWidget):
             self._threshold_val = d.threshold
             self._thr_line.setValue(d.threshold)
         color = {"warmup": "grey", "normal": "green", "anomaly": "red"}[d.state]
-        self._status.setText(f"status: ● {d.state}")
-        self._status.setStyleSheet(f"color: {color}")
+        self._status.setText(f"● {d.state.upper()}")
+        self._status.setStyleSheet(
+            f"color: white; background: {color}; padding: 4px 10px; border-radius: 4px;"
+        )
 
     def on_edge(self, edge: AnomalyEdge) -> None:
         if edge.patient_id != self._patient_id:
@@ -105,8 +132,16 @@ class StreamPanel(QWidget):
             right = self._x[-1]
             region = pg.LinearRegionItem(
                 values=(right - 0.5, right),
-                brush=QColor(214, 39, 40, 60),
+                brush=QColor(214, 39, 40, 80),
                 movable=False,
             )
             self._raw_plot.addItem(region)
             self._anomaly_regions.append(region)
+            ts = edge.ts_utc.split("T")[-1][:12] if "T" in edge.ts_utc else edge.ts_utc
+            self._alert_banner.setText(
+                f"⚠  ANOMALY DETECTED  at {ts}   residual={edge.residual:.3f} > threshold={edge.threshold:.3f}"
+            )
+            self._alert_banner.setStyleSheet(
+                "background: #d62728; color: white; padding: 6px; border-radius: 4px;"
+            )
+            self._banner_timer.start(5000)
