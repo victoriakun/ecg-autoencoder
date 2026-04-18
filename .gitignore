@@ -42,3 +42,9 @@ archive/
 # Claude Code files
 .claude/
 CLAUDE.md
+logs/events.db
+logs/*.log
+logs/*.log.*
+logs/.key
+realtime/__pycache__/
+tests/__pycache__/

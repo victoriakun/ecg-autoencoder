@@ -1,0 +1,5 @@
+pyqtgraph>=0.13
+PyQt5>=5.15
+cryptography>=42
+pytest>=8
+plyer>=2.1
