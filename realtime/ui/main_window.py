@@ -52,8 +52,10 @@ class MainWindow(QMainWindow):
         self._wire_signals()
 
     def _wire_menu(self) -> None:
+        self.menuBar().setNativeMenuBar(False)
         menu = self.menuBar().addMenu("&File")
         act = QAction("Settings…", self)
+        act.setMenuRole(QAction.NoRole)
         act.triggered.connect(self._open_settings)
         menu.addAction(act)
 
