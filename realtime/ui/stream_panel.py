@@ -119,8 +119,15 @@ class StreamPanel(QWidget):
         if d.threshold is not None:
             self._threshold_val = d.threshold
             self._thr_line.setValue(d.threshold)
-        color = {"warmup": "grey", "normal": "green", "anomaly": "red"}[d.state]
-        self._status.setText(f"● {d.state.upper()}")
+        if d.state == "anomaly":
+            label, color = "ANOMALY", "red"
+        elif d.state == "warmup":
+            label, color = "WARMUP", "grey"
+        elif d.exceeded:
+            label, color = "WATCHING", "#f0a020"
+        else:
+            label, color = "NORMAL", "green"
+        self._status.setText(f"● {label}")
         self._status.setStyleSheet(
             f"color: white; background: {color}; padding: 4px 10px; border-radius: 4px;"
         )
