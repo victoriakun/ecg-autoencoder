@@ -1,10 +1,26 @@
 {
-  "source_record": "data/mitbih/100",
-  "n_windows": 3608,
-  "mean": 0.16313526103654047,
-  "std": 0.09252337534738637,
-  "p50": 0.1617794288104567,
-  "p95": 0.3219926167931952,
-  "p99": 0.3836905218975766,
-  "max": 0.4922895222388923
+  "method": "F1-optimal with real-time (per-window) preprocessing",
+  "records_used": [
+    "100",
+    "101",
+    "102",
+    "103",
+    "104",
+    "105",
+    "106",
+    "107",
+    "108",
+    "109"
+  ],
+  "n_windows": 21644,
+  "n_anomalies": 6953,
+  "p99": 0.04907182343304161,
+  "threshold_f1_optimal": 0.007364504039287567,
+  "threshold_p99_normals": 0.04907182343304161,
+  "threshold_3std_normals": 0.03368397755548358,
+  "roc_auc": 0.9407685810313877,
+  "f1_at_optimal": 0.8345937511108883,
+  "precision_at_optimal": 0.7579243953979807,
+  "recall_at_optimal": 0.9285200632820365,
+  "fixed_threshold_choice": "p99 of normal beat-centered windows"
 }
