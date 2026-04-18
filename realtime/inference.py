@@ -39,10 +39,6 @@ def load_model(path: Path, build_fn) -> nn.Module:
         for k in ("input_dim", "latent_dim"):
             if k in ckpt and isinstance(ckpt[k], int):
                 kwargs[k] = ckpt[k]
-    try:
-        model = build_fn(**kwargs)
-    except TypeError:
-        model = build_fn()
 
     state = ckpt
     if isinstance(state, dict):
@@ -50,6 +46,21 @@ def load_model(path: Path, build_fn) -> nn.Module:
             if key in state:
                 state = state[key]
                 break
+
+    # Infer last-conv output width from the checkpoint's encoder.9 layer so
+    # the same build_fn can load different ConvAutoencoder variants.
+    enc9 = state.get("encoder.9.weight") if isinstance(state, dict) else None
+    if enc9 is not None and enc9.dim() >= 1:
+        kwargs["last_channels"] = int(enc9.shape[0])
+
+    try:
+        model = build_fn(**kwargs)
+    except TypeError:
+        kwargs.pop("last_channels", None)
+        try:
+            model = build_fn(**kwargs)
+        except TypeError:
+            model = build_fn()
     model.load_state_dict(state)
     model.eval()
     return model

@@ -3,7 +3,7 @@
   "window_samples": 720,
   "stride_samples": 180,
   "threshold_mode": "fixed_online",
-  "percentile_q": 0.99,
+  "percentile_q": 0.97,
   "zscore_k": 3.0,
   "fixed_online_nudge": 0.05,
   "smoother_k": 2,
@@ -12,7 +12,7 @@
   "warmup_min": 20,
   "inference_workers": 2,
   "queue_maxsize": 8,
-  "model_path": "models/convae_plus.pt",
-  "calibration_path": "models/convae_plus.calibration.json",
+  "model_path": "models/mitbih_autoencoder_best.pt",
+  "calibration_path": "models/mitbih_autoencoder_best.calibration.json",
   "records": ["100", "208"]
 }

@@ -1,0 +1,28 @@
+{
+  "method": "F1-optimal with real-time (per-window) preprocessing",
+  "records_used": [
+    "100",
+    "101",
+    "102",
+    "103",
+    "104",
+    "105",
+    "106",
+    "107",
+    "108",
+    "109"
+  ],
+  "n_windows": 21644,
+  "n_anomalies": 6953,
+  "p99": 0.05911513790488243,
+  "threshold_f1_optimal": 0.05911513790488243,
+  "threshold_p99_normals": 0.11734552606940273,
+  "threshold_3std_normals": 0.09954703226685524,
+  "roc_auc": 0.9655827100448637,
+  "f1_at_optimal": 0.8709301478658495,
+  "precision_at_optimal": 0.8319800942902043,
+  "recall_at_optimal": 0.913706313821372,
+  "fixed_threshold_choice": "F1-optimal on real-time preprocessing",
+  "checkpoint_stored_threshold": 0.04339778050780296,
+  "checkpoint_stored_f1": 0.8513921453010198
+}

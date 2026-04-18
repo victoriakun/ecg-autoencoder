@@ -18,10 +18,12 @@ class ConvAutoencoder(nn.Module):
     - Translation invariant
     """
 
-    def __init__(self, input_dim: int = WINDOW_SAMPLES, latent_dim: int = LATENT_DIM):
+    def __init__(self, input_dim: int = WINDOW_SAMPLES, latent_dim: int = LATENT_DIM,
+                 last_channels: int = 256):
         super().__init__()
         self.input_dim = input_dim
         self.latent_dim = latent_dim
+        self.last_channels = last_channels
 
         # Encoder: input (batch, 1, 720) -> (batch, latent_dim)
         self.encoder = nn.Sequential(
@@ -40,16 +42,15 @@ class ConvAutoencoder(nn.Module):
             nn.BatchNorm1d(128),
             nn.ReLU(),
 
-            # (batch, 128, 90) -> (batch, 256, 45)
-            nn.Conv1d(128, 256, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm1d(256),
+            # (batch, 128, 90) -> (batch, last_channels, 45)
+            nn.Conv1d(128, last_channels, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm1d(last_channels),
             nn.ReLU(),
 
-            nn.Flatten(),  # (batch, 256 * 45) = (batch, 11520)
+            nn.Flatten(),
         )
 
-        # Calculate flattened size
-        self._flat_size = 256 * (input_dim // 16)  # 11520 for 720 input
+        self._flat_size = last_channels * (input_dim // 16)
 
         # Bottleneck
         self.fc_encode = nn.Linear(self._flat_size, latent_dim)
@@ -57,10 +58,10 @@ class ConvAutoencoder(nn.Module):
 
         # Decoder: (batch, latent_dim) -> (batch, 1, 720)
         self.decoder = nn.Sequential(
-            nn.Unflatten(1, (256, input_dim // 16)),  # (batch, 256, 45)
+            nn.Unflatten(1, (last_channels, input_dim // 16)),
 
-            # (batch, 256, 45) -> (batch, 128, 90)
-            nn.ConvTranspose1d(256, 128, kernel_size=4, stride=2, padding=1),
+            # (batch, last_channels, 45) -> (batch, 128, 90)
+            nn.ConvTranspose1d(last_channels, 128, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm1d(128),
             nn.ReLU(),
 

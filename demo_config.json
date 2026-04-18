@@ -12,7 +12,7 @@
   "warmup_min": 20,
   "inference_workers": 2,
   "queue_maxsize": 8,
-  "model_path": "models/convae_plus.pt",
-  "calibration_path": "models/none.json",
+  "model_path": "models/mitbih_autoencoder_best.pt",
+  "calibration_path": "models/mitbih_autoencoder_best.calibration.json",
   "records": ["208"]
 }
