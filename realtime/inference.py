@@ -30,8 +30,11 @@ def load_model(path: Path, build_fn) -> nn.Module:
     """Load trained weights into the model returned by `build_fn()`."""
     model = build_fn()
     state = torch.load(path, map_location="cpu")
-    if isinstance(state, dict) and "state_dict" in state:
-        state = state["state_dict"]
+    if isinstance(state, dict):
+        for key in ("state_dict", "model_state_dict"):
+            if key in state:
+                state = state[key]
+                break
     model.load_state_dict(state)
     model.eval()
     return model
