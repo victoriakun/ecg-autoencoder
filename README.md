@@ -81,6 +81,38 @@ The convolutional autoencoder consists of:
 - **Split**: 70% train, 15% validation, 15% test
 - **Training**: Normal beats only (unsupervised learning)
 
+## Real-time pipeline
+
+The `realtime/` package adds a live pipeline that replays MIT-BIH records at
+360 Hz, detects anomalies with dynamic thresholding and N-of-M smoothing, and
+visualises 2–3 concurrent streams in a PyQt desktop UI.
+
+### Headless demo (CI-friendly)
+
+```bash
+python realtime_app.py --headless --records 208 --seconds 30
+```
+
+### GUI mode
+
+```bash
+python realtime_app.py
+```
+
+### Configuration
+
+Defaults live in `realtime/config_rt.py` (`RealtimeConfig` dataclass).
+To override, write a JSON file and pass it with `--config`:
+
+```bash
+python realtime_app.py --config my_config.json
+```
+
+### Architecture
+
+Documented in `docs/superpowers/specs/2026-04-18-realtime-ecg-pipeline-design.md`.
+Each module in `realtime/` maps to a thesis Section 3.1.* subsection.
+
 ## License
 
 MIT License
