@@ -11,11 +11,12 @@ from models import ConvAutoencoder
 
 
 REC_PATH = Path("data/mitbih/208")
+MODEL_PATH = Path("models/ecg_autoencoder.pt")
 
 
 @pytest.mark.skipif(
-    not REC_PATH.with_suffix(".dat").exists(),
-    reason="MIT-BIH record 208 not present; run `python dataset.py --download`",
+    not REC_PATH.with_suffix(".dat").exists() or not MODEL_PATH.exists(),
+    reason="MIT-BIH record 208 or models/ecg_autoencoder.pt missing",
 )
 def test_record_208_produces_anomalies(tmp_path):
     cfg = RealtimeConfig(
