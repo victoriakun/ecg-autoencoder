@@ -52,9 +52,10 @@ class MainWindow(QMainWindow):
         self._wire_signals()
 
     def _wire_menu(self) -> None:
+        menu = self.menuBar().addMenu("&File")
         act = QAction("Settings…", self)
         act.triggered.connect(self._open_settings)
-        self.menuBar().addAction(act)
+        menu.addAction(act)
 
     def _wire_signals(self) -> None:
         s = self._signals
