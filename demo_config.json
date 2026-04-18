@@ -1,0 +1,18 @@
+{
+  "sampling_rate": 360,
+  "window_samples": 720,
+  "stride_samples": 180,
+  "threshold_mode": "percentile",
+  "percentile_q": 0.97,
+  "zscore_k": 3.0,
+  "fixed_online_nudge": 0.05,
+  "smoother_k": 2,
+  "smoother_m": 3,
+  "residual_buffer_w": 100,
+  "warmup_min": 20,
+  "inference_workers": 2,
+  "queue_maxsize": 8,
+  "model_path": "models/convae_plus.pt",
+  "calibration_path": "models/none.json",
+  "records": ["208"]
+}
