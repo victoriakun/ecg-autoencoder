@@ -52,23 +52,23 @@ SYMBOL_NAMES = {
 
 # Target distribution (~50 beats total)
 TARGETS = {
-    "N":  10,   # normals (mostly TN, a few FP for contrast)
-    "V":  10,   # PVC - model usually catches
+    "N":   8,   # normals (mostly TN, a few FP for contrast)
+    "V":   8,   # PVC - model usually catches
     "F":   8,   # fusion - model usually misses
     "A":   6,   # atrial premature - mixed
-    "L":   5,   # LBBB
-    "R":   5,   # RBBB
+    "L":   8,   # LBBB - left bundle branch block
+    "R":   5,   # RBBB - right bundle branch block
     "/":   4,   # paced
     "f":   2,   # fusion paced
 }
 
 # Records that contain the various symbols in MIT-BIH ARR
-RECORDS = ["100", "118", "119", "200", "208", "209", "212", "213",
-           "217", "222", "232"]
+RECORDS = ["100", "109", "111", "118", "119", "200", "207", "208",
+           "209", "212", "213", "214", "217", "222", "232"]
 
 
 def collect_beats(data_dir: Path, model, threshold: float, warmup: int):
-    """Run runtime pipeline on each record, collect (rec_id, p, residual, sym)."""
+    """Run runtime pipeline on each record, collect (rec_id, p, residual, sym, pre, recon, raw_mv, fs)."""
     out: list = []
     for rid in RECORDS:
         rec_path = str(data_dir / rid)
@@ -96,7 +96,8 @@ def collect_beats(data_dir: Path, model, threshold: float, warmup: int):
             diffs = np.abs(np.asarray(ann.sample) - p)
             i = int(np.argmin(diffs))
             sym = ann.symbol[i] if diffs[i] <= int(0.1 * fs) else "?"
-            out.append((rid, p, res, sym, pre, recon))
+            raw_mv = win.copy()  # original mV signal, unprocessed
+            out.append((rid, p, res, sym, pre, recon, raw_mv, fs))
         print(f"  {rid}: {sum(1 for r in out if r[0]==rid)} beats")
     return out
 
@@ -137,9 +138,10 @@ def pick_examples(beats, threshold):
     return picked
 
 
-def render(picked, threshold, out_orig, out_recon, fs=360):
+def render(picked, threshold, out_orig, out_recon, out_raw, fs=360):
     out_orig.parent.mkdir(parents=True, exist_ok=True)
     out_recon.parent.mkdir(parents=True, exist_ok=True)
+    out_raw.parent.mkdir(parents=True, exist_ok=True)
 
     counts = defaultdict(int)
     for row in picked:
@@ -164,24 +166,32 @@ def render(picked, threshold, out_orig, out_recon, fs=360):
         "              TN (correctly cleared), FP (false alarm)\n"
     )
 
-    def render_one(pdf, row, with_recon: bool):
-        rid, p, res, sym, pre, recon, outcome = row
+    def render_one(pdf, row, mode: str):
+        """mode: 'orig' (preprocessed only), 'recon' (preprocessed + recon),
+                 'raw' (raw mV signal, no preprocessing)"""
+        rid, p, res, sym, pre, recon, raw_mv, beat_fs, outcome = row
         decision = "ANOMALY" if res > threshold else "NORMAL"
         truth = "ANOMALY" if sym in ANOMALY_SYMBOLS else "NORMAL"
         agree = decision == truth
-        t = np.arange(len(pre)) / fs
+        signal_to_plot = raw_mv if mode == "raw" else pre
+        t = np.arange(len(signal_to_plot)) / beat_fs
 
         fig, axes = plt.subplots(2, 1, figsize=(10, 6),
                                  gridspec_kw={"height_ratios": [3, 1]})
         ax = axes[0]
-        ax.plot(t, pre, color="#1f77b4", lw=1.2,
-                label="Original (preprocessed)")
-        if with_recon:
-            ax.plot(t, recon, color="#ff7f0e", lw=1.2, alpha=0.85,
-                    label="Model reconstruction")
-            ax.fill_between(t, pre, recon, color="#d62728", alpha=0.18,
-                            label="Residual region")
-        ax.set_xlabel("time (s)"); ax.set_ylabel("amplitude (z-scored)")
+        if mode == "raw":
+            ax.plot(t, raw_mv, color="#000000", lw=1.2, label="Raw ECG (mV)")
+            ax.set_ylabel("amplitude (mV, raw)")
+        else:
+            ax.plot(t, pre, color="#1f77b4", lw=1.2,
+                    label="Original (preprocessed)")
+            ax.set_ylabel("amplitude (z-scored)")
+            if mode == "recon":
+                ax.plot(t, recon, color="#ff7f0e", lw=1.2, alpha=0.85,
+                        label="Model reconstruction")
+                ax.fill_between(t, pre, recon, color="#d62728", alpha=0.18,
+                                label="Residual region")
+        ax.set_xlabel("time (s)")
         ax.set_title(
             f"{outcome}: {SYMBOL_NAMES.get(sym, '?')} ({sym})",
             fontsize=12, fontweight="bold",
@@ -213,16 +223,18 @@ def render(picked, threshold, out_orig, out_recon, fs=360):
     sym_order = ["N", "V", "F", "A", "L", "R", "/", "f"]
     picked_sorted = sorted(picked, key=lambda r: (
         sym_order.index(r[3]) if r[3] in sym_order else 99,
-        r[6],  # outcome string
+        r[8],  # outcome string (now at index 8 because of raw_mv + fs)
     ))
 
-    for outpath, with_recon in [(out_orig, False), (out_recon, True)]:
+    targets = [
+        (out_orig,  "orig",  "ECG examples - PREPROCESSED (z-scored), no reconstruction"),
+        (out_recon, "recon", "ECG examples - WITH MODEL RECONSTRUCTION OVERLAID"),
+        (out_raw,   "raw",   "ECG examples - RAW (mV), as it would come off a Holter"),
+    ]
+    for outpath, mode, title in targets:
         with PdfPages(outpath) as pdf:
             cover = plt.figure(figsize=(10, 7))
-            cover.text(0.5, 0.93,
-                       "ECG examples for cardiologist review"
-                       + (" - WITH MODEL RECONSTRUCTION" if with_recon
-                          else " - ORIGINAL ECG ONLY"),
+            cover.text(0.5, 0.93, title,
                        ha="center", fontsize=14, fontweight="bold")
             cover.text(0.05, 0.88, cover_text, va="top",
                        fontfamily="monospace", fontsize=10)
@@ -239,7 +251,7 @@ def render(picked, threshold, out_orig, out_recon, fs=360):
                              fontsize=18, fontweight="bold")
                     pdf.savefig(sec); plt.close(sec)
                     current_sym = sym
-                render_one(pdf, row, with_recon)
+                render_one(pdf, row, mode)
         print(f"Saved {outpath}")
 
 
@@ -252,6 +264,8 @@ def main() -> int:
     p.add_argument("--out-orig", default="docs/clinical_proof/examples_by_type.pdf")
     p.add_argument("--out-recon",
                    default="docs/clinical_proof/examples_by_type_recon.pdf")
+    p.add_argument("--out-raw",
+                   default="docs/clinical_proof/examples_by_type_raw.pdf")
     args = p.parse_args()
 
     data_dir = Path(args.data_dir)
@@ -265,13 +279,13 @@ def main() -> int:
     print(f"\nPicked {len(picked)} example beats:")
     counts = defaultdict(lambda: {"TP": 0, "FN": 0, "FP": 0, "TN": 0})
     for row in picked:
-        counts[row[3]][row[6]] += 1
+        counts[row[3]][row[8]] += 1
     for sym, c in counts.items():
         flat = " ".join(f"{k}={v}" for k, v in c.items() if v)
         print(f"  {sym} ({SYMBOL_NAMES.get(sym, '?'):30}): {flat}")
 
     render(picked, args.threshold,
-           Path(args.out_orig), Path(args.out_recon))
+           Path(args.out_orig), Path(args.out_recon), Path(args.out_raw))
     return 0
 
 
