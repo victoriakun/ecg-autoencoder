@@ -1,0 +1,9 @@
+{
+  "method": "Original F1-optimal threshold from batch evaluation, used directly because the real-time pipeline now uses warmup-derived global normalization (Option C) that matches batch preprocessing scale.",
+  "model": "models/mitbih_autoencoder_best.pt",
+  "p99": 0.04339778050780296,
+  "checkpoint_stored_threshold": 0.04339778050780296,
+  "checkpoint_stored_f1": 0.8513921453010198,
+  "checkpoint_stored_roc_auc": 0.9721134106915804,
+  "fixed_threshold_choice": "Stored checkpoint threshold (batch F1-optimal)"
+}

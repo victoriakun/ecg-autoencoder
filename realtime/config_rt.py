@@ -28,6 +28,10 @@ class RealtimeConfig:
     model_path: str = "models/convae_plus.pt"
     calibration_path: str = "models/ecg_autoencoder.calibration.json"
     records: tuple[str, ...] = ("100", "208", "222")
+    # Option C: when > 0, use per-patient warmup-derived global normalization
+    # (matches batch evaluation scale, allowing checkpoint thresholds to be
+    # used directly). 0 keeps the legacy per-window normalize.
+    normalizer_warmup_samples: int = 0
 
     def __post_init__(self) -> None:
         if self.threshold_mode not in VALID_MODES:

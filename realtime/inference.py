@@ -11,7 +11,8 @@ import numpy as np
 import torch
 from torch import nn
 
-from preprocess import preprocess
+from preprocess import bandpass_filter, preprocess
+from realtime.normalizer import WarmupNormalizer
 from realtime.stream_source import StreamWindow
 
 log = logging.getLogger(__name__)
@@ -74,12 +75,18 @@ class InferenceWorker:
         out_queue: "queue.Queue[InferenceResult]",
         stop_event: threading.Event,
         sampling_rate: int = 360,
+        normalizers: dict | None = None,
     ) -> None:
+        """If `normalizers` is provided (dict patient_id -> WarmupNormalizer),
+        the worker uses per-patient warmup-derived global normalization
+        (matches batch evaluation scale). Otherwise it falls back to the
+        original per-window normalize via preprocess()."""
         self._model = model
         self._in = in_queue
         self._out = out_queue
         self._stop = stop_event
         self._fs = sampling_rate
+        self._normalizers = normalizers
 
     def run(self) -> None:
         while not self._stop.is_set():
@@ -91,9 +98,18 @@ class InferenceWorker:
         except queue.Empty:
             return
         try:
-            pre = preprocess(win.samples, fs=self._fs, apply_bandpass=True,
-                             apply_notch=False)
-            x = torch.from_numpy(pre).float().unsqueeze(0)
+            if self._normalizers is not None:
+                bp = bandpass_filter(win.samples, fs=self._fs)
+                norm = self._normalizers.get(win.patient_id)
+                if norm is None:
+                    return
+                pre = norm.observe(bp)
+                if pre is None:
+                    return  # normalizer still warming up
+            else:
+                pre = preprocess(win.samples, fs=self._fs, apply_bandpass=True,
+                                 apply_notch=False)
+            x = torch.from_numpy(pre.astype(np.float32)).unsqueeze(0)
             with torch.no_grad():
                 recon_t = self._model(x)
             recon = recon_t.squeeze(0).cpu().numpy().astype(float)

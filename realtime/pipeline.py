@@ -19,6 +19,7 @@ from realtime.config_rt import RealtimeConfig
 from realtime.detector import Detector, DetectionResult
 from realtime.event_store import AnomalyEvent, EventStore, ModelVersionRecord
 from realtime.inference import InferenceResult, InferenceWorker
+from realtime.normalizer import WarmupNormalizer
 from realtime.stream_source import StreamSource, StreamWindow
 
 log = logging.getLogger(__name__)
@@ -54,6 +55,13 @@ class Pipeline:
         self._results_q: queue.Queue = queue.Queue(maxsize=cfg.queue_maxsize)
 
         self._detectors: dict = {r: Detector(r, cfg) for r in cfg.records}
+        if cfg.normalizer_warmup_samples > 0:
+            self._normalizers: dict = {
+                r: WarmupNormalizer(cfg.normalizer_warmup_samples)
+                for r in cfg.records
+            }
+        else:
+            self._normalizers = None
         self._threads: list = []
         self._model_version = self._compute_model_version()
         self.anomaly_count = 0
@@ -102,6 +110,7 @@ class Pipeline:
             w = InferenceWorker(
                 self._model, self._windows_q, self._results_q, self._stop,
                 sampling_rate=self._cfg.sampling_rate,
+                normalizers=self._normalizers,
             )
             self._spawn(f"inf-{i}", w.run)
 
