@@ -68,7 +68,10 @@ RECORDS = ["100", "109", "111", "118", "119", "200", "207", "208",
 
 
 def collect_beats(data_dir: Path, model, threshold: float, warmup: int):
-    """Run runtime pipeline on each record, collect (rec_id, p, residual, sym, pre, recon, raw_mv, fs)."""
+    """Run runtime pipeline on each record, collect
+    (rec_id, p, residual, center_sym, pre, recon, raw_mv, fs, beats_in_window)
+    where `beats_in_window` is a list of (offset_samples, symbol) for every
+    annotated beat falling inside the 2-second window."""
     out: list = []
     for rid in RECORDS:
         rec_path = str(data_dir / rid)
@@ -83,6 +86,7 @@ def collect_beats(data_dir: Path, model, threshold: float, warmup: int):
         peaks = list(xqrs.qrs_inds)
         norm = WarmupNormalizer(warmup)
         WIN = 720; half = WIN // 2
+        ann_samples = np.asarray(ann.sample)
         for p in peaks:
             if p - half < 0 or p + half > len(sig): continue
             win = sig[p - half: p + half]
@@ -93,11 +97,20 @@ def collect_beats(data_dir: Path, model, threshold: float, warmup: int):
                 recon = model(torch.from_numpy(pre.astype(np.float32))
                               .unsqueeze(0)).squeeze(0).numpy()
             res = float(np.mean((pre - recon) ** 2))
-            diffs = np.abs(np.asarray(ann.sample) - p)
-            i = int(np.argmin(diffs))
-            sym = ann.symbol[i] if diffs[i] <= int(0.1 * fs) else "?"
-            raw_mv = win.copy()  # original mV signal, unprocessed
-            out.append((rid, p, res, sym, pre, recon, raw_mv, fs))
+            # Center beat = closest annotation within 100 ms of detected peak
+            diffs = np.abs(ann_samples - p)
+            i_center = int(np.argmin(diffs))
+            center_sym = ann.symbol[i_center] if diffs[i_center] <= int(0.1 * fs) else "?"
+            # All annotated beats whose R-peak falls inside the window
+            in_win = (ann_samples >= p - half) & (ann_samples < p + half)
+            beats_in_window = sorted(
+                [(int(s - p), ann.symbol[k])
+                 for k, s in enumerate(ann_samples) if in_win[k]],
+                key=lambda x: x[0],
+            )
+            raw_mv = win.copy()
+            out.append((rid, p, res, center_sym, pre, recon, raw_mv, fs,
+                        beats_in_window))
         print(f"  {rid}: {sum(1 for r in out if r[0]==rid)} beats")
     return out
 
@@ -156,20 +169,27 @@ def render(picked, threshold, out_orig, out_recon, out_raw, fs=360):
         cover_text += f"  {sym} {SYMBOL_NAMES.get(sym, '?'):32} {n}\n"
     cover_text += (
         "\nLabels on each page:\n"
-        "  Symbol      cardiologist annotation\n"
+        "  Symbol      symbol of the centre beat (the one that labels the window)\n"
         "  Type        plain-language meaning\n"
         "  Source      MIT-BIH record + sample index (reproducible)\n"
-        "  Residual    model's reconstruction error\n"
+        "  In window   ALL annotated beats inside this 2-second window,\n"
+        "              listed as time-from-centre:symbol  (e.g. -380ms:N  *0ms:V*  +420ms:N)\n"
+        "              Asterisks mark the centre beat - the one whose label is the\n"
+        "              window label.  Other beats also affect the residual but their\n"
+        "              labels are NOT used.  This is the per-beat-label limitation.\n"
+        "  Residual    model's reconstruction error on the window\n"
         "  Threshold   the F1-optimal value 0.0434\n"
         "  Decision    model's NORMAL vs ANOMALY call\n"
-        "  Outcome     TP (caught), FN (missed),\n"
-        "              TN (correctly cleared), FP (false alarm)\n"
+        "  Outcome     TP, FN, TN, FP\n\n"
+        "On the plot itself: short vertical ticks at the bottom mark every annotated\n"
+        "R-peak in the window.  Green = NORMAL beat, magenta = ABNORMAL beat.\n"
+        "The centre beat's symbol is shown in *asterisks* in the textual list.\n"
     )
 
     def render_one(pdf, row, mode: str):
         """mode: 'orig' (preprocessed only), 'recon' (preprocessed + recon),
                  'raw' (raw mV signal, no preprocessing)"""
-        rid, p, res, sym, pre, recon, raw_mv, beat_fs, outcome = row
+        rid, p, res, sym, pre, recon, raw_mv, beat_fs, beats_in_window, outcome = row
         decision = "ANOMALY" if res > threshold else "NORMAL"
         truth = "ANOMALY" if sym in ANOMALY_SYMBOLS else "NORMAL"
         agree = decision == truth
@@ -197,16 +217,33 @@ def render(picked, threshold, out_orig, out_recon, out_raw, fs=360):
             fontsize=12, fontweight="bold",
         )
         ax.legend(loc="upper right"); ax.grid(alpha=0.3)
+        # Mark every annotated R-peak inside the window with a vertical tick
+        # and the beat symbol just above the x-axis. Box the centre beat.
+        ymin, ymax = ax.get_ylim()
+        center_offset = min(beats_in_window, key=lambda b: abs(b[0]))[0] \
+            if beats_in_window else None
+        for offs, s in beats_in_window:
+            t_pos = (offs + len(pre) // 2) / beat_fs
+            tick_color = "magenta" if s not in NORMAL_SYMBOLS else "green"
+            ax.axvline(t_pos, ymin=0, ymax=0.06, color=tick_color, lw=2)
+            label = f"*{s}*" if offs == center_offset else s
+            ax.text(t_pos, ymin + (ymax - ymin) * 0.04, label,
+                    color=tick_color, ha="center", va="bottom",
+                    fontsize=10, fontweight="bold")
 
         ax = axes[1]; ax.axis("off")
+        in_win_str = "  ".join(
+            f"{(offs/beat_fs)*1000:+5.0f}ms:{('*'+s+'*') if offs == center_offset else s}"
+            for offs, s in beats_in_window
+        ) if beats_in_window else "(none)"
         info = [
-            f"Symbol      {sym}",
+            f"Symbol      {sym}  (centre beat - the one that labels the window)",
             f"Type        {SYMBOL_NAMES.get(sym, '?')}",
             f"Source      record {rid}, sample {p}",
-            f"Residual    {res:.4f}",
-            f"Threshold   {threshold}",
-            f"Decision    {decision}     (truth: {truth})",
-            f"Outcome     {outcome}     {'✓ correct' if agree else '✗ mismatch'}",
+            f"In window   {in_win_str}",
+            f"Residual    {res:.4f}    Threshold {threshold}",
+            f"Decision    {decision}    (truth: {truth})",
+            f"Outcome     {outcome}    {'agree' if agree else 'mismatch'}",
         ]
         ax.text(0.02, 0.95, "\n".join(info), va="top", ha="left",
                 fontfamily="monospace", fontsize=11, transform=ax.transAxes)
@@ -223,7 +260,7 @@ def render(picked, threshold, out_orig, out_recon, out_raw, fs=360):
     sym_order = ["N", "V", "F", "A", "L", "R", "/", "f"]
     picked_sorted = sorted(picked, key=lambda r: (
         sym_order.index(r[3]) if r[3] in sym_order else 99,
-        r[8],  # outcome string (now at index 8 because of raw_mv + fs)
+        r[9],  # outcome string (last field after rid,p,res,sym,pre,recon,raw,fs,beats)
     ))
 
     targets = [
@@ -279,7 +316,7 @@ def main() -> int:
     print(f"\nPicked {len(picked)} example beats:")
     counts = defaultdict(lambda: {"TP": 0, "FN": 0, "FP": 0, "TN": 0})
     for row in picked:
-        counts[row[3]][row[8]] += 1
+        counts[row[3]][row[9]] += 1
     for sym, c in counts.items():
         flat = " ".join(f"{k}={v}" for k, v in c.items() if v)
         print(f"  {sym} ({SYMBOL_NAMES.get(sym, '?'):30}): {flat}")
