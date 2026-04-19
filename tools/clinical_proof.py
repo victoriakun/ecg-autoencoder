@@ -1,0 +1,243 @@
+"""Generate a multi-page PDF of example beats for cardiologist review.
+
+For each beat-centered window, runs the model end-to-end (real-time
+preprocessing path) and classifies it against the calibrated threshold.
+Picks the most informative examples in each confusion-matrix cell:
+
+- True positive  : abnormal beat correctly flagged (high residual)
+- False negative : abnormal beat missed by the model (residual just below thr)
+- False positive : normal beat wrongly flagged (highest-residual normals)
+- True negative  : normal beat correctly cleared (clean reconstructions)
+
+Each page shows the 2-second ECG window with the model's reconstruction
+overlaid plus a clinical label box (ground truth symbol, predicted class,
+residual, threshold, decision).
+
+Output: docs/clinical_proof/clinical_proof.pdf
+"""
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import numpy as np
+import torch
+import wfdb
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+from dataset import NORMAL_SYMBOLS, ANOMALY_SYMBOLS, MITBIH_RECORDS
+from models import ConvAutoencoder
+from preprocess import preprocess
+from realtime.inference import load_model
+
+
+SYMBOL_MEANINGS = {
+    "N": "Normal beat",
+    "L": "Left bundle branch block",
+    "R": "Right bundle branch block",
+    "A": "Atrial premature beat",
+    "a": "Aberrated atrial premature beat",
+    "J": "Nodal (junctional) premature beat",
+    "S": "Supraventricular premature beat",
+    "V": "Premature ventricular contraction (PVC)",
+    "F": "Fusion of ventricular and normal",
+    "!": "Ventricular flutter wave",
+    "e": "Atrial escape beat",
+    "j": "Nodal (junctional) escape beat",
+    "E": "Ventricular escape beat",
+    "/": "Paced beat",
+    "f": "Fusion of paced and normal",
+    "Q": "Unclassifiable",
+}
+
+
+def extract_records(records, data_dir, window_samples=720, lead=0):
+    xs, ys, syms, sources = [], [], [], []
+    for rid in records:
+        path = str(data_dir / rid)
+        try:
+            rec = wfdb.rdrecord(path)
+            ann = wfdb.rdann(path, "atr")
+        except Exception as e:
+            print(f"  skip {rid}: {e}")
+            continue
+        signal = rec.p_signal[:, lead].astype(float)
+        fs = rec.fs
+        half = window_samples // 2
+        for idx, sym in zip(ann.sample, ann.symbol):
+            if idx - half < 0 or idx + half > len(signal):
+                continue
+            if sym in NORMAL_SYMBOLS:
+                y = 0
+            elif sym in ANOMALY_SYMBOLS:
+                y = 1
+            else:
+                continue
+            raw = signal[idx - half:idx + half]
+            if len(raw) != window_samples:
+                continue
+            pre = preprocess(raw, fs, apply_bandpass=True, apply_notch=False)
+            xs.append(pre.astype(np.float32))
+            ys.append(y)
+            syms.append(sym)
+            sources.append(f"rec {rid}, sample {idx}")
+    return np.asarray(xs), np.asarray(ys), syms, sources
+
+
+def render_page(pdf, win, recon, residual, threshold, label, sym, source,
+                pred_label, fs=360):
+    t = np.arange(len(win)) / fs
+    fig, axes = plt.subplots(2, 1, figsize=(10, 6),
+                             gridspec_kw={"height_ratios": [3, 1]})
+
+    ax = axes[0]
+    ax.plot(t, win, color="#1f77b4", lw=1.2, label="Original (preprocessed)")
+    ax.plot(t, recon, color="#ff7f0e", lw=1.2, alpha=0.85, label="Reconstruction")
+    ax.fill_between(t, win, recon, color="#d62728", alpha=0.18,
+                    label="Residual region")
+    ax.set_xlabel("time (s)")
+    ax.set_ylabel("amplitude (z-scored)")
+    ax.set_title(f"{label}: ground truth = {SYMBOL_MEANINGS.get(sym, sym)} ({sym})",
+                 fontsize=12, fontweight="bold")
+    ax.legend(loc="upper right")
+    ax.grid(alpha=0.3)
+
+    ax = axes[1]
+    decision_color = "red" if pred_label == "ANOMALY" else "green"
+    info_lines = [
+        f"Source       : {source}",
+        f"Beat symbol  : {sym}  ({SYMBOL_MEANINGS.get(sym, 'unknown')})",
+        f"Ground truth : {'ANOMALY' if sym not in NORMAL_SYMBOLS else 'NORMAL'}",
+        f"Residual     : {residual:.4f}",
+        f"Threshold    : {threshold:.4f}",
+        f"Model says   : {pred_label}",
+    ]
+    ax.axis("off")
+    ax.text(0.02, 0.95, "\n".join(info_lines), va="top", ha="left",
+            fontfamily="monospace", fontsize=11, transform=ax.transAxes)
+    ax.text(0.98, 0.5, pred_label, va="center", ha="right",
+            color="white", fontsize=22, fontweight="bold",
+            bbox=dict(boxstyle="round,pad=0.6", facecolor=decision_color,
+                      edgecolor="none"),
+            transform=ax.transAxes)
+
+    plt.tight_layout()
+    pdf.savefig(fig)
+    plt.close(fig)
+
+
+def pick(idx_list, residuals, n, mode):
+    if not len(idx_list):
+        return []
+    sub = sorted(idx_list, key=lambda i: residuals[i],
+                 reverse=(mode == "highest"))
+    return sub[:n]
+
+
+def main() -> int:
+    p = argparse.ArgumentParser()
+    p.add_argument("--model", default="models/mitbih_autoencoder_best.pt")
+    p.add_argument("--calibration", default="models/mitbih_autoencoder_best.calibration.json")
+    p.add_argument("--data-dir", default="data/mitbih")
+    p.add_argument("--records", default=",".join(MITBIH_RECORDS[:8]))
+    p.add_argument("--per-cell", type=int, default=4,
+                   help="examples per confusion-matrix cell")
+    p.add_argument("--out", default="docs/clinical_proof/clinical_proof.pdf")
+    args = p.parse_args()
+
+    data_dir = Path(args.data_dir)
+    threshold = float(json.loads(Path(args.calibration).read_text())["p99"])
+    print(f"Using F1-optimal threshold = {threshold:.4f}")
+
+    print("Loading model and extracting beat-centered windows...")
+    model = load_model(Path(args.model), ConvAutoencoder)
+    X, y, syms, sources = extract_records(args.records.split(","), data_dir)
+    print(f"  {len(X)} windows, {y.sum()} anomalies")
+
+    print("Computing reconstructions and residuals...")
+    recons = []
+    residuals = []
+    with torch.no_grad():
+        for i in range(0, len(X), 256):
+            batch = torch.from_numpy(X[i:i + 256])
+            recon = model(batch).numpy()
+            recons.append(recon)
+            residuals.extend(((X[i:i + 256] - recon) ** 2).mean(axis=1).tolist())
+    recons = np.concatenate(recons, axis=0)
+    residuals = np.asarray(residuals)
+    preds = (residuals > threshold).astype(int)
+
+    tp = [i for i in range(len(y)) if y[i] == 1 and preds[i] == 1]
+    fn = [i for i in range(len(y)) if y[i] == 1 and preds[i] == 0]
+    fp = [i for i in range(len(y)) if y[i] == 0 and preds[i] == 1]
+    tn = [i for i in range(len(y)) if y[i] == 0 and preds[i] == 0]
+    print(f"Confusion: TP={len(tp)}  FN={len(fn)}  FP={len(fp)}  TN={len(tn)}")
+    print(f"  Sensitivity = {len(tp) / max(1, len(tp) + len(fn)):.3f}")
+    print(f"  Specificity = {len(tn) / max(1, len(tn) + len(fp)):.3f}")
+
+    selections = [
+        ("TRUE POSITIVE — model correctly flagged abnormal",
+         pick(tp, residuals, args.per_cell, "highest"), "ANOMALY"),
+        ("FALSE NEGATIVE — model MISSED an abnormal beat",
+         pick(fn, residuals, args.per_cell, "highest"), "NORMAL"),
+        ("FALSE POSITIVE — model wrongly flagged a normal beat",
+         pick(fp, residuals, args.per_cell, "highest"), "ANOMALY"),
+        ("TRUE NEGATIVE — model correctly cleared a normal beat",
+         pick(tn, residuals, args.per_cell, "lowest"), "NORMAL"),
+    ]
+
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with PdfPages(out_path) as pdf:
+        cover = plt.figure(figsize=(10, 6))
+        cover.text(0.5, 0.85, "Clinical proof-of-concept",
+                   ha="center", fontsize=22, fontweight="bold")
+        cover.text(0.5, 0.78, "ECG anomaly detection — example beats",
+                   ha="center", fontsize=14)
+        summary = (
+            f"Model: {Path(args.model).name}\n"
+            f"Threshold (F1-optimal, real-time preprocessing): {threshold:.4f}\n"
+            f"Records used: {args.records}\n"
+            f"Total beats inspected: {len(y)}    Anomalies in set: {int(y.sum())}\n\n"
+            f"Confusion matrix on these beats:\n"
+            f"  True positives  : {len(tp)}    (correctly caught)\n"
+            f"  False negatives : {len(fn)}    (missed by the model)\n"
+            f"  False positives : {len(fp)}    (false alarms)\n"
+            f"  True negatives  : {len(tn)}    (correctly cleared)\n\n"
+            f"  Sensitivity = {len(tp) / max(1, len(tp) + len(fn)):.3f}\n"
+            f"  Specificity = {len(tn) / max(1, len(tn) + len(fp)):.3f}\n\n"
+            f"How to read the next pages: each page shows one 2-second window\n"
+            f"with the original ECG (blue) and the model's reconstruction (orange).\n"
+            f"The shaded red area between them is the reconstruction error.\n"
+            f"A beat is flagged when that error exceeds the threshold above."
+        )
+        cover.text(0.08, 0.55, summary, va="top", fontfamily="monospace",
+                   fontsize=10)
+        pdf.savefig(cover)
+        plt.close(cover)
+
+        for label, idx_list, _pred in selections:
+            section = plt.figure(figsize=(10, 4))
+            section.text(0.5, 0.5, label, ha="center", va="center",
+                         fontsize=18, fontweight="bold", wrap=True)
+            section.text(0.5, 0.3, f"({len(idx_list)} example(s) follow)",
+                         ha="center", fontsize=11, color="grey")
+            pdf.savefig(section)
+            plt.close(section)
+
+            for i in idx_list:
+                pred_label = "ANOMALY" if preds[i] == 1 else "NORMAL"
+                render_page(pdf, X[i], recons[i], residuals[i], threshold,
+                            label, syms[i], sources[i], pred_label)
+
+    print(f"\nSaved {out_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -79,7 +79,24 @@ Show them the GUI: scroll through, point at the residual line crossing
 the dashed threshold, point at the WATCHING (yellow) → ANOMALY (red)
 state transition.
 
-### 1.6 What you want from them
+### 1.6 The example beats — `clinical_proof.pdf`
+
+Hand them the printed PDF. 16 example beats in four categories:
+
+- **True positive** — model correctly flagged abnormal beat (4 examples)
+- **False negative** — model **missed** an abnormal beat (4 examples)
+- **False positive** — model **wrongly** alerted on a normal beat (4 examples)
+- **True negative** — model correctly cleared a normal beat (4 examples)
+
+> "Each page shows a 2-second window with the original ECG (blue) and
+> the model's reconstruction (orange). The shaded red region is the
+> reconstruction error. The model flags a beat when that error exceeds
+> the threshold (currently 0.0591)."
+
+Ask her to specifically pause on the **false positives** and **false
+negatives** — those are the most informative pages.
+
+### 1.7 What you want from them
 
 > "I have three things I'd like your input on: (1) clinical validity —
 > are the arrhythmias I'm catching the *clinically important* ones?
