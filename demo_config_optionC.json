@@ -15,5 +15,6 @@
   "model_path": "models/mitbih_autoencoder_best.pt",
   "calibration_path": "models/mitbih_autoencoder_best.batchscale.calibration.json",
   "records": ["208"],
-  "normalizer_warmup_samples": 10800
+  "normalizer_warmup_samples": 10800,
+  "windowing_mode": "beat_centered"
 }

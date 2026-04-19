@@ -103,6 +103,7 @@ class Pipeline:
                 clock=clock,
                 out_queue=self._windows_q,
                 stop_event=self._stop,
+                windowing_mode=self._cfg.windowing_mode,
             )
             self._spawn(f"src-{patient_id}", src.run)
 

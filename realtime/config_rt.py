@@ -32,6 +32,10 @@ class RealtimeConfig:
     # (matches batch evaluation scale, allowing checkpoint thresholds to be
     # used directly). 0 keeps the legacy per-window normalize.
     normalizer_warmup_samples: int = 0
+    # Option C completion: "beat_centered" runs streaming R-peak detection
+    # so each window is anchored on a QRS complex (matches the batch
+    # evaluation methodology). "stride" cuts a window every stride_samples.
+    windowing_mode: str = "stride"
 
     def __post_init__(self) -> None:
         if self.threshold_mode not in VALID_MODES:
