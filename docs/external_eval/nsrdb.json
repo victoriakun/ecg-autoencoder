@@ -1,0 +1,31 @@
+{
+  "db": "nsrdb",
+  "threshold": 0.04339778050780296,
+  "n_records": 2,
+  "total_windows": 7166,
+  "total_duration_min": 60.0,
+  "alert_rate_per_min": 118.6,
+  "fraction_flagged": 0.9930226067541167,
+  "residual_p50": 0.3492651073366739,
+  "residual_p95": 0.6550267759947881,
+  "residual_p99": 0.8463966162371792,
+  "interpretation": "All windows are healthy sinus rhythm. Every flag is a FALSE POSITIVE. False positive rate = 99.30%; ~118.60 false alarms per minute per patient.",
+  "per_record": [
+    {
+      "record": "16265",
+      "src_fs": 128,
+      "duration_sec": 1800.0,
+      "n_windows_scored": 3583,
+      "residuals": 0.39135346229469503,
+      "in_af": null
+    },
+    {
+      "record": "16272",
+      "src_fs": 128,
+      "duration_sec": 1800.0,
+      "n_windows_scored": 3583,
+      "residuals": 0.3381658442529691,
+      "in_af": null
+    }
+  ]
+}

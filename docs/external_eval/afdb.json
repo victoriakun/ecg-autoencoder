@@ -1,0 +1,45 @@
+{
+  "db": "afdb",
+  "threshold": 0.04339778050780296,
+  "n_records": 3,
+  "total_windows": 10749,
+  "total_duration_min": 90.0,
+  "alert_rate_per_min": 117.83333333333333,
+  "fraction_flagged": 0.986603404967904,
+  "residual_p50": 0.37370258089664915,
+  "residual_p95": 0.6202639843261827,
+  "residual_p99": 0.8483875066603618,
+  "AF_window_count": 1286,
+  "non_AF_window_count": 9463,
+  "sensitivity_to_AF_fixed": 0.9937791601866252,
+  "specificity_to_AF_fixed": 0.014371763711296628,
+  "sensitivity_to_AF_adaptive_p95": 0.15085536547433903,
+  "specificity_to_AF_adaptive_p95": 0.9634365423227307,
+  "interpretation": "FIXED 0.043 threshold: caught 99.4% of AF, 98.6% non-AF false-positive rate. ADAPTIVE per-record p95: caught 15.1% of AF, 3.7% non-AF false-positive rate.",
+  "per_record": [
+    {
+      "record": "04015",
+      "src_fs": 250,
+      "duration_sec": 1800.0,
+      "n_windows_scored": 3583,
+      "residuals": 0.43629115451784567,
+      "in_af": 0.11359196204298075
+    },
+    {
+      "record": "04043",
+      "src_fs": 250,
+      "duration_sec": 1800.0,
+      "n_windows_scored": 3583,
+      "residuals": 0.319206433674803,
+      "in_af": 0.24532514652525816
+    },
+    {
+      "record": "04048",
+      "src_fs": 250,
+      "duration_sec": 1800.0,
+      "n_windows_scored": 3583,
+      "residuals": 0.3807840259119182,
+      "in_af": 0.0
+    }
+  ]
+}

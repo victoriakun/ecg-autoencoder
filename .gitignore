@@ -48,3 +48,5 @@ logs/*.log.*
 logs/.key
 realtime/__pycache__/
 tests/__pycache__/
+data/nsrdb/
+data/afdb/
