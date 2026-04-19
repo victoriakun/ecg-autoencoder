@@ -57,6 +57,11 @@ SYMBOL_MEANINGS = {
 
 
 def extract_records(records, data_dir, window_samples=720, lead=0):
+    """Extract beat-centered windows using the ORIGINAL preprocessing
+    methodology from dataset.py / evaluate.py: bandpass + zero-mean /
+    unit-variance applied ONCE across the whole record, then cut
+    beat-centered windows. This matches the residual scale at which
+    the published threshold 0.0434 was F1-optimal."""
     xs, ys, syms, sources = [], [], [], []
     for rid in records:
         path = str(data_dir / rid)
@@ -68,6 +73,7 @@ def extract_records(records, data_dir, window_samples=720, lead=0):
             continue
         signal = rec.p_signal[:, lead].astype(float)
         fs = rec.fs
+        signal = preprocess(signal, fs, apply_bandpass=True, apply_notch=False)
         half = window_samples // 2
         for idx, sym in zip(ann.sample, ann.symbol):
             if idx - half < 0 or idx + half > len(signal):
@@ -78,15 +84,44 @@ def extract_records(records, data_dir, window_samples=720, lead=0):
                 y = 1
             else:
                 continue
-            raw = signal[idx - half:idx + half]
-            if len(raw) != window_samples:
+            window = signal[idx - half:idx + half]
+            if len(window) != window_samples:
                 continue
-            pre = preprocess(raw, fs, apply_bandpass=True, apply_notch=False)
-            xs.append(pre.astype(np.float32))
+            xs.append(window.astype(np.float32))
             ys.append(y)
             syms.append(sym)
             sources.append(f"rec {rid}, sample {idx}")
     return np.asarray(xs), np.asarray(ys), syms, sources
+
+
+def render_blind_page(pdf, win, beat_id, fs=360):
+    """Render an ECG window with NO labels - cardiologist marks judgment."""
+    t = np.arange(len(win)) / fs
+    fig, axes = plt.subplots(2, 1, figsize=(10, 6),
+                             gridspec_kw={"height_ratios": [4, 1]})
+    ax = axes[0]
+    ax.plot(t, win, color="#1f77b4", lw=1.4)
+    ax.set_xlabel("time (s)")
+    ax.set_ylabel("amplitude (z-scored)")
+    ax.set_title(f"Beat #{beat_id} — judge in isolation",
+                 fontsize=13, fontweight="bold")
+    ax.grid(alpha=0.3)
+
+    ax = axes[1]
+    ax.axis("off")
+    ax.text(0.02, 0.85, f"Beat #{beat_id}",
+            fontfamily="monospace", fontsize=12, fontweight="bold",
+            transform=ax.transAxes)
+    ax.text(0.02, 0.55,
+            "Your judgment:   [ ] NORMAL     [ ] ABNORMAL     [ ] UNREADABLE",
+            fontfamily="monospace", fontsize=11, transform=ax.transAxes)
+    ax.text(0.02, 0.20, "If abnormal — best guess of type:  __________________________",
+            fontfamily="monospace", fontsize=10, transform=ax.transAxes,
+            color="#444")
+
+    plt.tight_layout()
+    pdf.savefig(fig)
+    plt.close(fig)
 
 
 def render_page(pdf, win, recon, residual, threshold, label, sym, source,
@@ -142,12 +177,19 @@ def pick(idx_list, residuals, n, mode):
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--model", default="models/mitbih_autoencoder_best.pt")
-    p.add_argument("--calibration", default="models/mitbih_autoencoder_best.calibration.json")
+    p.add_argument("--calibration", default="models/mitbih_autoencoder_best.batchscale.calibration.json")
     p.add_argument("--data-dir", default="data/mitbih")
     p.add_argument("--records", default=",".join(MITBIH_RECORDS[:8]))
     p.add_argument("--per-cell", type=int, default=4,
                    help="examples per confusion-matrix cell")
     p.add_argument("--out", default="docs/clinical_proof/clinical_proof.pdf")
+    p.add_argument("--blind", action="store_true",
+                   help="generate a blind version: hides the model's decision "
+                        "and ground-truth so the cardiologist can label first, "
+                        "then we compare with model + MIT-BIH labels afterwards")
+    p.add_argument("--blind-out", default="docs/clinical_proof/clinical_blind.pdf")
+    p.add_argument("--answer-key-out",
+                   default="docs/clinical_proof/blind_answer_key.csv")
     args = p.parse_args()
 
     data_dir = Path(args.data_dir)
@@ -236,6 +278,60 @@ def main() -> int:
                             label, syms[i], sources[i], pred_label)
 
     print(f"\nSaved {out_path}")
+
+    # Optionally also render a blind version of the same selected beats,
+    # plus a CSV answer key so you can score her labels later.
+    if args.blind:
+        all_picked = []
+        for label, idx_list, _ in selections:
+            all_picked.extend(idx_list)
+        rng = np.random.default_rng(0)
+        order = list(rng.permutation(len(all_picked)))
+        blind_path = Path(args.blind_out)
+        blind_path.parent.mkdir(parents=True, exist_ok=True)
+        with PdfPages(blind_path) as pdf:
+            cover = plt.figure(figsize=(10, 6))
+            cover.text(0.5, 0.85, "Blind labeling — cardiologist worksheet",
+                       ha="center", fontsize=20, fontweight="bold")
+            cover.text(0.5, 0.78,
+                       f"{len(all_picked)} beats, randomized order",
+                       ha="center", fontsize=12)
+            cover.text(0.08, 0.65,
+                       "Instructions:\n"
+                       "  1. For each beat, mark NORMAL / ABNORMAL / UNREADABLE.\n"
+                       "  2. If abnormal, optionally jot the suspected beat type.\n"
+                       "  3. DO NOT confer with anyone or look at the model output.\n"
+                       "  4. Return the marked sheets - we'll compare with the\n"
+                       "     model's decisions and the MIT-BIH reference labels.\n\n"
+                       "We will compute Cohen's kappa between your labels, the\n"
+                       "model's labels, and the MIT-BIH reference labels - this\n"
+                       "is the rigorous validation step.",
+                       va="top", fontfamily="monospace", fontsize=11)
+            pdf.savefig(cover); plt.close(cover)
+            for blind_id, original_idx in enumerate(order, start=1):
+                i = all_picked[original_idx]
+                render_blind_page(pdf, X[i], blind_id)
+
+        # Write answer key CSV
+        import csv
+        key_path = Path(args.answer_key_out)
+        key_path.parent.mkdir(parents=True, exist_ok=True)
+        with key_path.open("w") as f:
+            w = csv.writer(f)
+            w.writerow(["beat_id", "source", "ground_truth_symbol",
+                        "ground_truth_class", "model_residual",
+                        "model_threshold", "model_decision"])
+            for blind_id, original_idx in enumerate(order, start=1):
+                i = all_picked[original_idx]
+                w.writerow([
+                    blind_id, sources[i], syms[i],
+                    "ANOMALY" if y[i] == 1 else "NORMAL",
+                    f"{residuals[i]:.4f}", f"{threshold:.4f}",
+                    "ANOMALY" if preds[i] == 1 else "NORMAL",
+                ])
+        print(f"Saved {blind_path}")
+        print(f"Saved {key_path}  (do NOT show to the cardiologist)")
+
     return 0
 
 
