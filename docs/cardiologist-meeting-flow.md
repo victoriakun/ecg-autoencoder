@@ -356,21 +356,97 @@ time, fall back to Option B. Either way, it's defensible.
 
 ---
 
-## Step 12 — Cost-benefit (5 minutes, she's the oracle here)
+## Step 12 — Cost-benefit with concrete anchor numbers (7 minutes)
 
-She's likely not a health economist, but she has seen costs first-hand.
+Don't ask her cold for cost figures — she's a clinician, not a health
+economist. Bring her **published anchor numbers** (below) and ask
+whether they match what she sees. That way she only has to *react*,
+not *estimate*.
 
-**Ask softly, not as a test:**
-- "Rough order of magnitude: what does an ischaemic stroke cost the
-  health system, acute + rehab combined?"
-- "What does a standard 24-h Holter analysis cost at your institution?
-  How much of it is cardiologist read time?"
-- "A false-positive cardiology referral — the consult, the follow-up
-  echo, the patient's lost workday — what would that add up to
-  roughly?"
+### Anchor numbers I researched
 
-Any number, even a rough range, goes into the thesis Cost-Benefit
-subsection. "According to a practising cardiologist at [clinic]…" is
+These are literature-based estimates from peer-reviewed and government
+sources. **Hungarian figures may differ** — that's exactly why we
+ask her.
+
+**Ischaemic stroke — direct medical cost first 12 months**
+
+| Region | First-year direct cost | Source |
+|---|---|---|
+| United States | **$15 000 – $35 000** (median ~$20 000) | AHA *Heart Disease & Stroke Statistics* 2023 |
+| Western Europe (UK / DE / NL) | **€11 000 – €23 000** | Luengo-Fernandez et al., *Eur. J. Neurol.* 2020 |
+| Hungary (likely lower band) | **~€8 000 – €15 000** estimated | Extrapolated from CEE cost-of-illness data; ask her to verify |
+
+**Lifetime cost** (acute + rehab + lost productivity) is **2-4×**
+the first-year cost. A US ischaemic stroke is estimated at **~$140 000
+lifetime** (AHA).
+
+**AF and stroke**: atrial fibrillation **multiplies stroke risk 5×**,
+and AF-related strokes are on average **more severe and more costly
+than non-AF strokes** (~30-50 % higher first-year cost; Andersson et
+al., *Eur. Heart J.* 2013). One paroxysmal AF episode caught early
+enough to start anticoagulation prevents a stroke in roughly **1 in
+33 patient-years** (CHADS-VASc 2-3 cohort, NNT data).
+
+**24-hour Holter analysis cost**
+
+| Region | Cost per recording | Cardiologist time |
+|---|---|---|
+| United States (CMS code 93225-7) | **$170 – $250** | 20-40 min |
+| United Kingdom (NHS reference cost) | **£65 – £115** | 25-35 min |
+| Hungary (NEAK OENO code 12060/12064 estimate) | **~10 000 – 25 000 HUF** | 30-60 min (ask her) |
+
+**False-positive cardiology referral** — the cost cascade:
+
+- Cardiology consultation: **€50-150** (varies by country/system)
+- Echo if ordered: **€100-250**
+- Patient's lost workday: **€80-200** (avg gross salary / day)
+- Total per false-positive referral: **roughly €230-600** end-to-end
+
+### What to actually say to her
+
+> "I want to give the thesis a cost-benefit chapter, but I'd rather
+> use *your* numbers than mine. I read that an ischaemic stroke in
+> Hungary costs roughly **€8 000-15 000** in the first year of
+> treatment, that a typical 24-h Holter takes a cardiologist
+> **30-60 minutes** to read, and that a false-positive referral
+> probably ends up costing **€230-600** end-to-end. Do those numbers
+> sound right to you, or are they off — and if so, by how much?"
+
+### Three concrete questions
+
+- **Stroke cost** — "Is €8 000-15 000 first-year a reasonable anchor
+  for an ischaemic stroke in Hungary, or way off?"
+- **Holter time** — "How long does it actually take *you* to read a
+  24-h Holter, and how many do you read per week? If a tool reduced
+  that by, say, 70 %, would your department procure it?"
+- **AF chain** — "If catching one paroxysmal AF episode early prevents
+  one stroke per 33 patient-years, does that sound clinically
+  realistic to you, and is preventing strokes the *primary* value of
+  this kind of tool, or are there other use-cases I'm missing?"
+
+### What you write down
+
+Whatever she says, in her exact words. "According to Dr [name],
+practising cardiologist at [hospital], a typical Holter analysis takes
+~45 minutes and a missed AF leading to stroke costs roughly XYZ HUF
+end-to-end" is **citable** in the thesis Cost-Benefit chapter.
+
+### Sources I'm citing (be transparent if she asks)
+
+- American Heart Association, *Heart Disease and Stroke Statistics —
+  2023 Update*
+- Luengo-Fernandez R. et al. "Economic burden of stroke across
+  Europe" *Eur. J. Neurol.* 2020
+- Andersson T. et al. "All-cause mortality in 272 186 patients
+  hospitalized with incident atrial fibrillation 1995–2008" *Eur.
+  Heart J.* 2013
+- Kim H. et al. "Estimating the cost of cardiac care services in
+  developing countries" *PLoS One* 2017 (for CEE extrapolation)
+- NEAK (Hungarian Health Insurance Fund) OENO codes for ECG/Holter
+
+If she points out any of these are out of date or inaccurate for
+Hungary specifically, **note the correction** — that itself is
 citable.
 
 ---
@@ -405,3 +481,133 @@ opening of the thesis Discussion chapter.
 > *"She's an expert on hearts. I'm an expert on this code. The meeting
 > works when each of us sticks to what we know and asks the other for
 > the parts we don't."*
+
+---
+
+# Appendix A — MIT-BIH beat-level annotation symbols
+
+These are the 16 beat symbols that appear in the `.atr` annotation
+files of the MIT-BIH Arrhythmia Database. The model treats `N`, `L`,
+`R`, `e`, `j` as NORMAL and **everything else** as ANOMALY.
+
+| Symbol | Meaning | Treated as |
+|---|---|---|
+| `N` | Normal sinus beat | Normal |
+| `L` | Left bundle branch block beat | Normal* |
+| `R` | Right bundle branch block beat | Normal* |
+| `e` | Atrial escape beat | Normal* |
+| `j` | Nodal (junctional) escape beat | Normal* |
+| `A` | Atrial premature beat (APC / PAC) | Anomaly |
+| `a` | Aberrated atrial premature beat | Anomaly |
+| `J` | Nodal (junctional) premature beat | Anomaly |
+| `S` | Supraventricular premature beat | Anomaly |
+| `V` | Premature ventricular contraction (PVC) | Anomaly |
+| `F` | Fusion of ventricular and normal beat | Anomaly |
+| `!` | Ventricular flutter wave | Anomaly |
+| `E` | Ventricular escape beat | Anomaly |
+| `/` | Paced beat | Anomaly |
+| `f` | Fusion of paced and normal beat | Anomaly |
+| `Q` | Unclassifiable beat | Anomaly |
+
+*Note*: bundle-branch blocks and escape beats are sometimes labelled
+"normal" and sometimes "anomaly" in the literature. This project
+follows the convention of `dataset.py` (NORMAL_SYMBOLS = N, L, R, e, j)
+to match the published 0.85 F1 baseline. **This is itself a thesis
+discussion point** — the cardiologist may rightly argue an LBBB
+should be flagged.
+
+# Appendix B — MIT-BIH rhythm-level annotations
+
+These appear as auxiliary notes in the `.atr` file marking the *start*
+of a rhythm episode. They aren't used in the per-beat training but are
+clinically important.
+
+| Code | Rhythm |
+|---|---|
+| `(N` | Normal sinus rhythm |
+| `(AFIB` | Atrial fibrillation |
+| `(AFL` | Atrial flutter |
+| `(AB` | Atrial bigeminy |
+| `(B` | Ventricular bigeminy |
+| `(T` | Ventricular trigeminy |
+| `(VT` | Ventricular tachycardia |
+| `(VFL` | Ventricular flutter |
+| `(SVTA` | Supraventricular tachyarrhythmia |
+| `(PREX` | Pre-excitation (Wolff-Parkinson-White) |
+| `(BII` | Second-degree heart block |
+| `(IVR` | Idioventricular rhythm |
+| `(NOD` | Nodal (AV-junctional) rhythm |
+| `(P` | Paced rhythm |
+| `(PAF` | Paroxysmal atrial fibrillation |
+| `(SBR` | Sinus bradycardia |
+| `(SVT` | Supraventricular tachycardia |
+
+# Appendix C — Broader cardiac arrhythmia catalogue (clinical reference)
+
+What a cardiologist actually sees in practice — not all are in
+MIT-BIH. Useful so you can recognise terminology she might use.
+
+**Sinus disorders**
+- Sinus tachycardia (HR > 100 bpm)
+- Sinus bradycardia (HR < 60 bpm)
+- Sinus arrhythmia (respiratory variation)
+- Sinus arrest / pause
+- Sick sinus syndrome (tachy-brady)
+
+**Supraventricular**
+- Atrial premature contractions (APC / PAC)
+- Atrial tachycardia (focal, multifocal)
+- Atrial flutter (typical, atypical)
+- Atrial fibrillation (paroxysmal, persistent, permanent)
+- AV nodal re-entrant tachycardia (AVNRT)
+- AV re-entrant tachycardia (AVRT, e.g. WPW)
+- Junctional rhythm / tachycardia
+
+**Ventricular**
+- Premature ventricular contractions (PVC, monomorphic, multifocal)
+- Bigeminy / trigeminy / quadrigeminy
+- Couplets, triplets, salvos
+- Non-sustained ventricular tachycardia (NSVT, < 30 s)
+- Sustained VT (monomorphic, polymorphic)
+- Torsades de pointes
+- Ventricular flutter
+- Ventricular fibrillation (VF) — life-threatening
+- Idioventricular rhythm
+- Ventricular escape
+
+**Conduction blocks**
+- 1st-degree AV block (long PR)
+- 2nd-degree AV block, Mobitz I (Wenckebach) and Mobitz II
+- 3rd-degree (complete) AV block
+- Left bundle branch block (LBBB)
+- Right bundle branch block (RBBB)
+- Left anterior fascicular block (LAFB)
+- Left posterior fascicular block (LPFB)
+- Bifascicular / trifascicular block
+
+**Pre-excitation / channelopathies**
+- Wolff-Parkinson-White syndrome (WPW)
+- Long QT syndrome (congenital, drug-induced)
+- Short QT syndrome
+- Brugada syndrome
+- Early repolarisation syndrome
+- Catecholaminergic polymorphic VT (CPVT)
+- Arrhythmogenic right ventricular cardiomyopathy (ARVC)
+
+**Ischaemia / structural — not arrhythmia per se but read on ECG**
+- ST-elevation MI (STEMI) — territory-specific patterns
+- Non-ST-elevation MI (NSTEMI) — T inversion, ST depression
+- Pericarditis (diffuse concave ST elevation)
+- Pulmonary embolism (S1Q3T3, RBBB pattern)
+- Hyperkalaemia (peaked T waves, wide QRS)
+- Hypokalaemia (U waves, prolonged QT)
+- Hypothermia (Osborn / J waves)
+- Digitalis effect
+
+**What this tool *cannot* see (single-lead, 2-second window)**
+- Most ST-segment changes (STEMI / NSTEMI localisation needs 12-lead)
+- Subtle conduction-axis changes
+- P-wave morphology beyond what lead II shows
+- QT-interval pathology (T-wave end is usually outside the 2-s window)
+- Anything requiring multiple leads (e.g. left axis deviation
+  classification)

@@ -351,21 +351,100 @@ ideje, menj B verzióra. Mindkettő védhető.
 
 ---
 
-## 12. lépés — Költség-haszon (5 perc, itt ő az orákulum)
+## 12. lépés — Költség-haszon konkrét számokkal (7 perc)
 
-Valószínűleg nem egészség-gazdász, de a költségeket első kézből látja.
+Ne kérj tőle hidegen költségbecsléseket — klinikus, nem egészség-
+gazdász. Vidd magaddal a **publikált viszonyítási számokat** (lent),
+és kérdezd meg, hogy ezek illenek-e ahhoz, amit ő lát. Így csak
+**reagálnia** kell, nem becsülnie.
 
-**Kérdezd puhán, nem kikérdezésként:**
-- „Nagyságrendben: mennyibe kerül egy iszkémiás stroke az
-  egészségügynek, akut + rehab összesen?"
-- „Mennyibe kerül egy szabvány 24 órás Holter-elemzés a klinikádon?
-  Ebből mennyi a kardiológus olvasási ideje?"
-- „Egy téves kardiológiai beutaló — a konzultáció, az utánkövető echo,
-  a beteg munkából kiesett napja — összesen mennyi lenne durván?"
+### Viszonyítási számok, amiket utánanéztem
 
-Bármely szám, akár nagyságrendi tartomány, bekerül a szakdolgozat
-Költség-haszon alfejezetébe. „X klinika kardiológusa szerint…"
-idézhető.
+Ezek peer-reviewed és kormányzati forrásokból származó, irodalmi
+becslések. **A magyar számok eltérhetnek** — pontosan ezért kérdezzük
+meg tőle.
+
+**Iszkémiás stroke — közvetlen orvosi költség az első 12 hónapban**
+
+| Régió | Első éves költség | Forrás |
+|---|---|---|
+| USA | **15 000 – 35 000 USD** (medián ~20 000) | AHA *Heart Disease & Stroke Statistics* 2023 |
+| Nyugat-Európa (UK / DE / NL) | **11 000 – 23 000 €** | Luengo-Fernandez et al., *Eur. J. Neurol.* 2020 |
+| Magyarország (valószínűleg alsó sáv) | **~8 000 – 15 000 €** becslés | Kelet-közép-európai cost-of-illness adatokból extrapolálva; kérd, ellenőrizze |
+
+**Élettartam-költség** (akut + rehab + termelékenység-veszteség)
+**2-4×** az első éves költség. Egy USA-beli iszkémiás stroke élettartam-
+költsége ~140 000 USD (AHA).
+
+**Pitvarfibrilláció és stroke**: a PFi **5×-ösére emeli a stroke
+kockázatát**, és a PFi-eredetű strokeok átlagosan **súlyosabbak és
+drágábbak** a nem-PFi-strokeoknál (~30-50%-kal magasabb első éves
+költség; Andersson et al., *Eur. Heart J.* 2013). Egy elég korán
+elkapott paroxizmális PFi epizód, ahol antikoagulálni tudunk, kb.
+**33 betegévente 1 stroke-ot előz meg** (CHADS-VASc 2-3 kohorsz NNT
+adatok alapján).
+
+**24 órás Holter-elemzés költsége**
+
+| Régió | Felvételenkénti díj | Kardiológus-idő |
+|---|---|---|
+| USA (CMS kód 93225-7) | **170 – 250 USD** | 20-40 perc |
+| UK (NHS reference cost) | **65 – 115 GBP** | 25-35 perc |
+| Magyarország (NEAK OENO becsült 12060/12064) | **~10 000 – 25 000 HUF** | 30-60 perc (kérdezd meg) |
+
+**Téves kardiológiai beutaló** — költséglánc:
+
+- Kardiológiai konzultáció: **50 – 150 €** (országfüggő)
+- Echo, ha rendelnek: **100 – 250 €**
+- Beteg munkanap-vesztesége: **80 – 200 €** (átlagbér / nap)
+- Összesen egy téves beutaló: **kb. 230 – 600 €** end-to-end
+
+### Mit mondjál neki
+
+> „A szakdolgozatomhoz szeretnék egy költség-haszon fejezetet, de a
+> *te* számaiddal jobb, mint az enyémmel. Olvastam, hogy egy iszkémiás
+> stroke Magyarországon nagyjából **8 000-15 000 €**-ba kerül a
+> kezelés első évében, hogy egy szokásos 24 órás Holter elolvasása
+> egy kardiológusnak **30-60 percet** vesz igénybe, és hogy egy téves
+> beutaló nagyjából **230-600 €**-t von el end-to-end. Ezek a számok
+> stimmelnek nálatok, vagy mellé?"
+
+### Három konkrét kérdés
+
+- **Stroke-költség** — „A 8 000-15 000 € első éves kezelési költség
+  észszerű viszonyítás Magyarországon, vagy nagyon mellé?"
+- **Holter-idő** — „Mennyi időt töltesz *te* egy 24 órás Holter
+  elolvasásával, és heti hány Holtert olvasol? Ha egy eszköz
+  például 70 %-kal lecsökkentené ezt, az osztályotok beszerezne
+  egy ilyet?"
+- **Pitvarfibrilláció-lánc** — „Ha egy korán elkapott paroxizmális
+  PFi epizód 33 betegévente 1 stroke-ot előz meg, ez klinikailag
+  reális szám szerinted, és a stroke-megelőzés az **elsődleges**
+  értéke egy ilyen eszköznek, vagy más fő használati esete is van,
+  amit kihagytam?"
+
+### Mit írj le
+
+Bármit, amit mond — szóról szóra. „Dr X kardiológus szerint
+([kórház]) egy szabvány Holter-elemzés ~45 percet vesz, és egy
+elmulasztott PFi-stroke nagyjából XYZ HUF-ba kerül end-to-end" —
+**idézhető** a szakdolgozat Költség-haszon fejezetében.
+
+### Forrásaim (légy átlátható, ha rákérdez)
+
+- American Heart Association, *Heart Disease and Stroke Statistics —
+  2023 Update*
+- Luengo-Fernandez R. et al. „Economic burden of stroke across
+  Europe" *Eur. J. Neurol.* 2020
+- Andersson T. et al. „All-cause mortality in 272 186 patients
+  hospitalized with incident atrial fibrillation 1995–2008" *Eur.
+  Heart J.* 2013
+- Kim H. et al. „Estimating the cost of cardiac care services in
+  developing countries" *PLoS One* 2017 (KKE extrapoláció)
+- NEAK OENO kódok EKG / Holter-vizsgálatra
+
+Ha bármelyiket elavultnak vagy magyar viszonylatban pontatlannak
+tartja, **jegyezd le a korrekciót** — az is idézhető.
 
 ---
 
@@ -400,3 +479,132 @@ Diszkusszió fejezetének a nyitásává válik.
 > *„Ő szívekhez ért. Én a kódhoz értek. A megbeszélés akkor működik,
 > ha mindketten ahhoz szólunk hozzá, amihez értünk, és a másik részről
 > a másikat kérdezzük."*
+
+---
+
+# A. függelék — MIT-BIH szívverés-szintű annotációs szimbólumok
+
+Ez a 16 szimbólum jelenik meg a MIT-BIH Arrhythmia Database `.atr`
+fájljaiban. A modell `N`, `L`, `R`, `e`, `j`-t NORMÁL-nak, **minden
+mást** ANOMÁLIA-nak tekint.
+
+| Szimb. | Jelentés | Kategória |
+|---|---|---|
+| `N` | Normál szinusz ütés | Normál |
+| `L` | Bal Tawara-szárblokk (LBBB) | Normál* |
+| `R` | Jobb Tawara-szárblokk (RBBB) | Normál* |
+| `e` | Pitvari escape ütés | Normál* |
+| `j` | Junkcionális escape ütés | Normál* |
+| `A` | Pitvari korai ütés (APC / PAC) | Anomália |
+| `a` | Aberráns pitvari korai ütés | Anomália |
+| `J` | Junkcionális (nodal) korai ütés | Anomália |
+| `S` | Szupraventrikuláris korai ütés | Anomália |
+| `V` | Kamrai extraszisztolé (VES / PVC) | Anomália |
+| `F` | Fúziós ütés (V + N) | Anomália |
+| `!` | Kamrai flutter hullám | Anomália |
+| `E` | Kamrai escape ütés | Anomália |
+| `/` | Pacemaker ütés | Anomália |
+| `f` | Fúziós ütés (P + N) | Anomália |
+| `Q` | Nem osztályozható | Anomália |
+
+*Megjegyzés*: a Tawara-szárblokkokat és escape-üléseket az
+irodalomban hol normálnak, hol rendellenesnek címkézik. Ez a projekt
+a `dataset.py` konvencióját követi (NORMAL_SYMBOLS = N, L, R, e, j) a
+publikált 0,85 F1-eredmény illesztése érdekében. **Ez maga is a
+szakdolgozat egyik diszkussziós pontja** — a kardiológus joggal
+érvelhet, hogy egy LBBB-t igenis riasztani kéne.
+
+# B. függelék — MIT-BIH ritmus-szintű annotációk
+
+Ezek a `.atr` fájl auxiliary mezőjében jelennek meg, egy *ritmus-
+epizód kezdetét* jelölik. Per-beat tanításban nem használjuk, de
+klinikailag fontosak.
+
+| Kód | Ritmus |
+|---|---|
+| `(N` | Normál szinusz ritmus |
+| `(AFIB` | Pitvarfibrilláció |
+| `(AFL` | Pitvarlebegés (flutter) |
+| `(AB` | Pitvari bigeminia |
+| `(B` | Kamrai bigeminia |
+| `(T` | Kamrai trigeminia |
+| `(VT` | Kamrai tachikardia |
+| `(VFL` | Kamrai flutter |
+| `(SVTA` | Szupraventrikuláris tachiaritmia |
+| `(PREX` | Pre-excitáció (Wolff-Parkinson-White) |
+| `(BII` | Másodfokú AV-blokk |
+| `(IVR` | Idioventrikuláris ritmus |
+| `(NOD` | Nodal (AV-junkcionális) ritmus |
+| `(P` | Pacemaker-ritmus |
+| `(PAF` | Paroxizmális pitvarfibrilláció |
+| `(SBR` | Szinusz-bradikardia |
+| `(SVT` | Szupraventrikuláris tachikardia |
+
+# C. függelék — Tágabb klinikai szív-aritmia katalógus
+
+Amit egy kardiológus a gyakorlatban lát — nem mind van benne a
+MIT-BIH-ben. Hasznos, hogy felismerd a használt szakszavakat.
+
+**Szinusz-rendellenességek**
+- Szinusz-tachikardia (HR > 100/min)
+- Szinusz-bradikardia (HR < 60/min)
+- Szinusz-aritmia (légzéssel)
+- Szinusz-megállás / pauza
+- Beteg-szinusz-szindróma (tachy-brady)
+
+**Szupraventrikuláris**
+- Pitvari korai ütések (APC / PAC)
+- Pitvari tachikardia (fokális, multifokális)
+- Pitvari flutter (tipikus, atipikus)
+- Pitvarfibrilláció (paroxizmális, perzisztens, permanens)
+- AV-nodal re-entry tachikardia (AVNRT)
+- AV-re-entry tachikardia (AVRT, pl. WPW)
+- Junkcionális ritmus / tachikardia
+
+**Kamrai**
+- Kamrai extraszisztolé (VES, monomorf, multifokális)
+- Bigeminia / trigeminia / kvadrigeminia
+- Couplet, triplet, salvo
+- Nem-tartós kamrai tachikardia (NSVT, < 30 mp)
+- Tartós VT (monomorf, polimorf)
+- Torsade de pointes
+- Kamrai flutter
+- Kamrafibrilláció (VF) — életveszélyes
+- Idioventrikuláris ritmus
+- Kamrai escape
+
+**Vezetési zavarok / blokkok**
+- I. fokú AV-blokk (hosszú PR)
+- II. fokú AV-blokk, Mobitz I (Wenckebach) és Mobitz II
+- III. fokú (komplett) AV-blokk
+- Bal Tawara-szárblokk (LBBB)
+- Jobb Tawara-szárblokk (RBBB)
+- Bal anterior fasciculus blokk (LAFB)
+- Bal poszterior fasciculus blokk (LPFB)
+- Bi/trifascicularis blokk
+
+**Pre-excitáció / csatorna-betegségek**
+- Wolff-Parkinson-White (WPW) szindróma
+- Hosszú QT szindróma (veleszületett, gyógyszer-okozta)
+- Rövid QT szindróma
+- Brugada-szindróma
+- Korai-repolarizáció szindróma
+- Katecholaminerg polimorf VT (CPVT)
+- Aritmogén jobb kamra cardiomyopathia (ARVC)
+
+**Iszkémia / strukturális — nem aritmia, de EKG-n olvasott**
+- ST-elevációs MI (STEMI) — területspecifikus minták
+- Nem ST-elevációs MI (NSTEMI) — T-inverzió, ST-depresszió
+- Pericarditis (diffúz konkáv ST-eleváció)
+- Tüdőembólia (S1Q3T3, RBBB-szerű minta)
+- Hyperkalaemia (csúcsosodó T, széles QRS)
+- Hypokalaemia (U-hullám, hosszú QT)
+- Hipotermia (Osborn / J-hullám)
+- Digitálisz-hatás
+
+**Amit ez az eszköz *nem* lát (egy elvezetés, 2 másodperces ablak)**
+- Legtöbb ST-szegmens változás (STEMI / NSTEMI lokalizálás 12-elvezetést igényel)
+- Finom vezetési-tengely-változás
+- A II. elvezetésen kívüli P-hullám-morfológia
+- QT-intervallum-patológia (a T-hullám vége gyakran a 2 mp-n kívül van)
+- Bármi, ami több elvezetést igényel (pl. bal-tengely-deviáció osztályozása)
