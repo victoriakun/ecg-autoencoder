@@ -11,10 +11,19 @@ címkéjű lépések kihagyhatók.
 **Amit vigyél magaddal:**
 
 - Laptop a futó GUI-val (`demo_config_optionC.json`, 208-as felvétel)
-- Kinyomtatva: `examples_by_type_raw.pdf` (51 szívverés, nyers mV)
-- Kinyomtatva: `examples_by_type_recon.pdf` (ugyanaz a 51 rekonstrukcióval)
+- Kinyomtatva: `examples_by_type_raw.pdf` — **nyers mV + szabványos
+  rózsaszín EKG-papír rács (1 mm = 0,04 mp × 0,1 mV)**. *Ezt használd,
+  amikor klinikailag kérdezel egy ütésről.* Ezt olvassa minden nap.
+- Kinyomtatva: `examples_by_type_recon.pdf` — **ugyanaz a 51 ütés
+  z-scored skálán, a modell rekonstrukciójával**. *Csak akkor használd,
+  amikor azt magyarázod, mit látott a modell, és miért döntött úgy.*
 - Kinyomtatva: `compare_208.pdf` (per-beat idővonal 208-ra)
 - Kinyomtatva: `clinical_blind.pdf` + toll (opcionális vak címkézés)
+
+**Fontos:** a modell-PDF-ek **z-scored** tengelyei (
+`examples_by_type.pdf` / `_recon.pdf`) **nem alkalmasak** klinikai
+döntéshez — a z-score elveszti az abszolút mV-ot. Ha azt kérdezed
+„rendellenes ez az ütés?", **mindig a nyers** PDF-et add a kezébe.
 
 ---
 

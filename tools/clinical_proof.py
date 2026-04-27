@@ -62,7 +62,7 @@ def extract_records(records, data_dir, window_samples=720, lead=0):
     unit-variance applied ONCE across the whole record, then cut
     beat-centered windows. This matches the residual scale at which
     the published threshold 0.0434 was F1-optimal."""
-    xs, ys, syms, sources = [], [], [], []
+    xs, ys, syms, sources, raws = [], [], [], [], []
     for rid in records:
         path = str(data_dir / rid)
         try:
@@ -71,9 +71,9 @@ def extract_records(records, data_dir, window_samples=720, lead=0):
         except Exception as e:
             print(f"  skip {rid}: {e}")
             continue
-        signal = rec.p_signal[:, lead].astype(float)
+        raw_signal = rec.p_signal[:, lead].astype(float)
         fs = rec.fs
-        signal = preprocess(signal, fs, apply_bandpass=True, apply_notch=False)
+        signal = preprocess(raw_signal, fs, apply_bandpass=True, apply_notch=False)
         half = window_samples // 2
         for idx, sym in zip(ann.sample, ann.symbol):
             if idx - half < 0 or idx + half > len(signal):
@@ -85,27 +85,43 @@ def extract_records(records, data_dir, window_samples=720, lead=0):
             else:
                 continue
             window = signal[idx - half:idx + half]
+            raw_window = raw_signal[idx - half:idx + half]
             if len(window) != window_samples:
                 continue
             xs.append(window.astype(np.float32))
+            raws.append(raw_window.astype(np.float32))
             ys.append(y)
             syms.append(sym)
             sources.append(f"rec {rid}, sample {idx}")
-    return np.asarray(xs), np.asarray(ys), syms, sources
+    return (np.asarray(xs), np.asarray(ys), syms, sources, np.asarray(raws))
 
 
 def render_blind_page(pdf, win, beat_id, fs=360):
-    """Render an ECG window with NO labels - cardiologist marks judgment."""
+    """Render a RAW-mV ECG window on standard pink ECG-paper grid -
+    cardiologist marks judgment (no labels visible)."""
     t = np.arange(len(win)) / fs
     fig, axes = plt.subplots(2, 1, figsize=(10, 6),
                              gridspec_kw={"height_ratios": [4, 1]})
     ax = axes[0]
-    ax.plot(t, win, color="#1f77b4", lw=1.4)
+    ax.plot(t, win, color="#000000", lw=1.4)
+    ax.set_xlim(0, len(win) / fs)
+    mv_min, mv_max = float(win.min()), float(win.max())
+    pad = 0.5 * (mv_max - mv_min) if mv_max > mv_min else 0.5
+    ax.set_ylim(mv_min - pad * 0.2, mv_max + pad * 0.2)
+    for x in np.arange(0, len(win) / fs + 1e-6, 0.04):
+        ax.axvline(x, color="#f7c4c4", lw=0.4, zorder=0)
+    for x in np.arange(0, len(win) / fs + 1e-6, 0.20):
+        ax.axvline(x, color="#e07b7b", lw=0.8, zorder=0)
+    y0 = np.floor(ax.get_ylim()[0] * 10) / 10
+    y1 = np.ceil(ax.get_ylim()[1] * 10) / 10
+    for y in np.arange(y0, y1 + 1e-6, 0.1):
+        ax.axhline(y, color="#f7c4c4", lw=0.4, zorder=0)
+    for y in np.arange(y0, y1 + 1e-6, 0.5):
+        ax.axhline(y, color="#e07b7b", lw=0.8, zorder=0)
     ax.set_xlabel("time (s)")
-    ax.set_ylabel("amplitude (z-scored)")
+    ax.set_ylabel("amplitude (mV)")
     ax.set_title(f"Beat #{beat_id} — judge in isolation",
                  fontsize=13, fontweight="bold")
-    ax.grid(alpha=0.3)
 
     ax = axes[1]
     ax.axis("off")
@@ -198,7 +214,7 @@ def main() -> int:
 
     print("Loading model and extracting beat-centered windows...")
     model = load_model(Path(args.model), ConvAutoencoder)
-    X, y, syms, sources = extract_records(args.records.split(","), data_dir)
+    X, y, syms, sources, X_raw = extract_records(args.records.split(","), data_dir)
     print(f"  {len(X)} windows, {y.sum()} anomalies")
 
     print("Computing reconstructions and residuals...")
@@ -310,7 +326,7 @@ def main() -> int:
             pdf.savefig(cover); plt.close(cover)
             for blind_id, original_idx in enumerate(order, start=1):
                 i = all_picked[original_idx]
-                render_blind_page(pdf, X[i], blind_id)
+                render_blind_page(pdf, X_raw[i], blind_id)
 
         # Write answer key CSV
         import csv

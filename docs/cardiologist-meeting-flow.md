@@ -11,10 +11,20 @@ marked `*OPTIONAL*` can be dropped.
 Files to have on the laptop and printed:
 
 - GUI running with `demo_config_optionC.json` (record 208)
-- Printed `examples_by_type_raw.pdf` (51 beats, raw mV)
-- Printed `examples_by_type_recon.pdf` (same 51 beats, with reconstruction)
+- Printed `examples_by_type_raw.pdf` — **raw mV with standard pink ECG-
+  paper grid (1 mm = 0.04 s × 0.1 mV)**. *Use this whenever you ask
+  her to clinically judge a beat.* This is the format she reads every
+  day.
+- Printed `examples_by_type_recon.pdf` — **same 51 beats but z-scored
+  with the model's reconstruction overlaid**. *Use this only when
+  explaining what the model saw / why it decided what it did.*
 - Printed `compare_208.pdf` (per-beat timeline, record 208)
 - Printed `clinical_blind.pdf` + a pen (for optional blind labelling)
+
+**Important:** the **z-scored** axes in the model PDFs (
+`examples_by_type.pdf` / `_recon.pdf`) are useless for clinical
+judgment — z-score throws away absolute mV. Always hand her the
+**raw** PDF first when asking "is this beat abnormal?"
 
 ---
 
