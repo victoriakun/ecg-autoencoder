@@ -201,7 +201,23 @@ def render(picked, threshold, out_orig, out_recon, out_raw, fs=360):
         ax = axes[0]
         if mode == "raw":
             ax.plot(t, raw_mv, color="#000000", lw=1.2, label="Raw ECG (mV)")
-            ax.set_ylabel("amplitude (mV, raw)")
+            ax.set_ylabel("amplitude (mV)")
+            # Clinical ECG-paper grid: small 0.04 s x 0.1 mV (1 mm),
+            # big 0.20 s x 0.5 mV (5 mm). Standard paper colour: pale pink.
+            ax.set_xlim(0, len(raw_mv) / beat_fs)
+            mv_min, mv_max = float(raw_mv.min()), float(raw_mv.max())
+            mv_pad = 0.5 * (mv_max - mv_min) if mv_max > mv_min else 0.5
+            ax.set_ylim(mv_min - mv_pad * 0.2, mv_max + mv_pad * 0.2)
+            for x in np.arange(0, len(raw_mv) / beat_fs + 1e-6, 0.04):
+                ax.axvline(x, color="#f7c4c4", lw=0.4, zorder=0)
+            for x in np.arange(0, len(raw_mv) / beat_fs + 1e-6, 0.20):
+                ax.axvline(x, color="#e07b7b", lw=0.8, zorder=0)
+            y0 = np.floor(ax.get_ylim()[0] * 10) / 10
+            y1 = np.ceil(ax.get_ylim()[1] * 10) / 10
+            for y in np.arange(y0, y1 + 1e-6, 0.1):
+                ax.axhline(y, color="#f7c4c4", lw=0.4, zorder=0)
+            for y in np.arange(y0, y1 + 1e-6, 0.5):
+                ax.axhline(y, color="#e07b7b", lw=0.8, zorder=0)
         else:
             ax.plot(t, pre, color="#1f77b4", lw=1.2,
                     label="Original (preprocessed)")
@@ -216,7 +232,9 @@ def render(picked, threshold, out_orig, out_recon, out_raw, fs=360):
             f"{outcome}: {SYMBOL_NAMES.get(sym, '?')} ({sym})",
             fontsize=12, fontweight="bold",
         )
-        ax.legend(loc="upper right"); ax.grid(alpha=0.3)
+        ax.legend(loc="upper right")
+        if mode != "raw":
+            ax.grid(alpha=0.3)
         # Mark every annotated R-peak inside the window with a vertical tick
         # and the beat symbol just above the x-axis. Box the centre beat.
         ymin, ymax = ax.get_ylim()
