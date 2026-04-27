@@ -136,6 +136,10 @@ class Pipeline:
 
     def _handle_edge(self, result: InferenceResult, d: DetectionResult) -> None:
         event_type = "anomaly_start" if d.event == "rising" else "anomaly_end"
+        offset_seconds = (
+            float(result.record_offset_samples) / float(self._cfg.sampling_rate)
+            if hasattr(result, "record_offset_samples") else None
+        )
         ev = AnomalyEvent(
             patient_id=d.patient_id,
             event_type=event_type,
@@ -144,6 +148,7 @@ class Pipeline:
             threshold=d.threshold or 0.0,
             threshold_mode=self._cfg.threshold_mode,
             model_version=self._model_version,
+            record_offset_seconds=offset_seconds,
         )
         self._store.queue_event(ev)
         if event_type == "anomaly_start":

@@ -28,6 +28,7 @@ class StreamWindow:
     patient_id: str
     ts_utc: str
     samples: np.ndarray  # shape (window_samples,)
+    record_offset_samples: int = 0  # sample index of window centre in the record
 
 
 class StreamSource:
@@ -85,7 +86,8 @@ class StreamSource:
             if end > signal.size:
                 break
             window = signal[start:end].copy()
-            self._emit(window, start)
+            centre = start + self._window // 2
+            self._emit(window, centre)
             start += self._stride
             self._clock.sleep(stride_seconds)
 
@@ -134,6 +136,7 @@ class StreamSource:
                     patient_id=self._patient_id,
                     ts_utc=_now_iso(),
                     samples=window,
+                    record_offset_samples=int(anchor_idx),
                 ),
                 timeout=1.0,
             )

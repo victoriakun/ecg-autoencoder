@@ -13,19 +13,22 @@ log = logging.getLogger(__name__)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS anomaly_events (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    patient_id      TEXT    NOT NULL,
-    event_type      TEXT    NOT NULL,
-    ts_utc          TEXT    NOT NULL,
-    residual        REAL    NOT NULL,
-    threshold       REAL    NOT NULL,
-    threshold_mode  TEXT    NOT NULL,
-    model_version   TEXT    NOT NULL,
-    acknowledged    INTEGER DEFAULT 0,
-    ack_ts_utc      TEXT
+    id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+    patient_id             TEXT    NOT NULL,
+    event_type             TEXT    NOT NULL,
+    ts_utc                 TEXT    NOT NULL,
+    record_offset_seconds  REAL    DEFAULT NULL,
+    residual               REAL    NOT NULL,
+    threshold              REAL    NOT NULL,
+    threshold_mode         TEXT    NOT NULL,
+    model_version          TEXT    NOT NULL,
+    acknowledged           INTEGER DEFAULT 0,
+    ack_ts_utc             TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_events_patient_ts
     ON anomaly_events(patient_id, ts_utc);
+-- One-shot ALTERs to add the column for older databases
+
 
 CREATE TABLE IF NOT EXISTS model_versions (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,6 +52,7 @@ class AnomalyEvent:
     threshold: float
     threshold_mode: str
     model_version: str
+    record_offset_seconds: float | None = None
 
 
 @dataclass(frozen=True)
@@ -80,10 +84,11 @@ class EventStore:
         with self._write_lock:
             self._con.execute(
                 "INSERT INTO anomaly_events(patient_id, event_type, ts_utc,"
-                " residual, threshold, threshold_mode, model_version)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (ev.patient_id, ev.event_type, ev.ts_utc, ev.residual,
-                 ev.threshold, ev.threshold_mode, ev.model_version),
+                " record_offset_seconds, residual, threshold, threshold_mode,"
+                " model_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (ev.patient_id, ev.event_type, ev.ts_utc,
+                 ev.record_offset_seconds,
+                 ev.residual, ev.threshold, ev.threshold_mode, ev.model_version),
             )
             self._con.commit()
 

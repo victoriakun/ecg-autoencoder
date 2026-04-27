@@ -25,6 +25,7 @@ class InferenceResult:
     raw: np.ndarray
     recon: np.ndarray
     residual: float
+    record_offset_samples: int = 0
 
 
 def load_model(path: Path, build_fn) -> nn.Module:
@@ -121,6 +122,7 @@ class InferenceWorker:
                     raw=pre,
                     recon=recon,
                     residual=residual,
+                    record_offset_samples=win.record_offset_samples,
                 ),
                 timeout=1.0,
             )
