@@ -50,15 +50,15 @@ SYMBOL_NAMES = {
     "Q": "Unclassifiable",
 }
 
-# Target distribution (~50 beats total)
+# Target distribution (50 beats total)
 TARGETS = {
     "N":   8,   # normals (mostly TN, a few FP for contrast)
-    "V":   8,   # PVC - model usually catches
-    "F":   8,   # fusion - model usually misses
-    "A":   6,   # atrial premature - mixed
-    "L":   8,   # LBBB - left bundle branch block
-    "R":   5,   # RBBB - right bundle branch block
-    "/":   4,   # paced
+    "V":   8,   # PVC - model usually catches  (~97% sens)
+    "F":   9,   # fusion - model usually misses (~40% sens, key discussion)
+    "A":   6,   # atrial premature - mixed     (~76% sens)
+    "L":   8,   # LBBB - treated as normal     (~2% FPR, sanity)
+    "R":   5,   # RBBB - treated as normal     (~2% FPR, sanity)
+    "/":   4,   # paced beats                  (~99% sens)
     "f":   2,   # fusion paced
 }
 
@@ -116,38 +116,38 @@ def collect_beats(data_dir: Path, model, threshold: float, warmup: int):
 
 
 def pick_examples(beats, threshold):
-    """For each target symbol, pick a mix of MISSED (FN), CAUGHT (TP),
-    or just present beats - whatever is most informative."""
+    """For each target symbol, pick a mix of outcomes appropriate to the
+    symbol's class (NORMAL → TN/FP, ANOMALY → TP/FN)."""
     by_sym: dict = defaultdict(list)
     for row in beats:
         sym = row[3]
         if sym in TARGETS or sym == "N":
             by_sym[sym].append(row)
     picked: list = []
-    rng = np.random.default_rng(0)
     for sym, target_n in TARGETS.items():
         candidates = by_sym.get(sym, [])
         if not candidates:
             continue
+        flagged = sorted([c for c in candidates if c[2] > threshold],
+                         key=lambda r: -r[2])
+        unflagged = sorted([c for c in candidates if c[2] <= threshold],
+                           key=lambda r: -r[2])
+        is_normal = sym in NORMAL_SYMBOLS
         if sym == "N":
-            # 8 true negatives + 2 false positives (rare normals near threshold)
-            tn = sorted([c for c in candidates if c[2] <= threshold],
-                        key=lambda r: r[2])
-            fp = sorted([c for c in candidates if c[2] > threshold],
-                        key=lambda r: -r[2])
-            picked += [(*r, "TN") for r in tn[:8]]
-            picked += [(*r, "FP") for r in fp[:2]]
-        else:
-            # Mix of catches (TP) and misses (FN), prioritising both edges
-            tp = sorted([c for c in candidates if c[2] > threshold],
-                        key=lambda r: -r[2])
-            fn = sorted([c for c in candidates if c[2] <= threshold],
-                        key=lambda r: -r[2])
+            # Headline normals: 8 true negatives + 2 high-residual FPs
+            picked += [(*r, "TN") for r in unflagged[:8]]
+            picked += [(*r, "FP") for r in flagged[:2]]
+        elif is_normal:
+            # NORMAL_SYMBOLS other than 'N' (L, R, e, j) — flagged means FP,
+            # unflagged means TN. Pick a balanced mix to show both behaviours.
             half = target_n // 2
-            picked_tp = tp[:half]
-            picked_fn = fn[:target_n - half]
-            picked += [(*r, "TP") for r in picked_tp]
-            picked += [(*r, "FN") for r in picked_fn]
+            picked += [(*r, "TN") for r in unflagged[:target_n - half]]
+            picked += [(*r, "FP") for r in flagged[:half]]
+        else:
+            # ANOMALY symbols — flagged is TP, unflagged is FN.
+            half = target_n // 2
+            picked += [(*r, "TP") for r in flagged[:half]]
+            picked += [(*r, "FN") for r in unflagged[:target_n - half]]
     return picked
 
 
@@ -205,9 +205,19 @@ def render(picked, threshold, out_orig, out_recon, out_raw, fs=360):
             # Clinical ECG-paper grid: small 0.04 s x 0.1 mV (1 mm),
             # big 0.20 s x 0.5 mV (5 mm). Standard paper colour: pale pink.
             ax.set_xlim(0, len(raw_mv) / beat_fs)
-            mv_min, mv_max = float(raw_mv.min()), float(raw_mv.max())
-            mv_pad = 0.5 * (mv_max - mv_min) if mv_max > mv_min else 0.5
-            ax.set_ylim(mv_min - mv_pad * 0.2, mv_max + mv_pad * 0.2)
+            # Robust y-limits: 1st-99th percentile so a single pacemaker
+            # spike or electrode artefact doesn't squash the trace flat.
+            # Min span of 1.5 mV keeps a clinically familiar amplitude
+            # even on quiet windows.
+            finite = raw_mv[np.isfinite(raw_mv)]
+            if finite.size:
+                p_lo = float(np.percentile(finite, 1))
+                p_hi = float(np.percentile(finite, 99))
+            else:
+                p_lo, p_hi = -0.75, 0.75
+            span = max(p_hi - p_lo, 1.5)
+            mid = 0.5 * (p_lo + p_hi)
+            ax.set_ylim(mid - span * 0.7, mid + span * 0.7)
             for x in np.arange(0, len(raw_mv) / beat_fs + 1e-6, 0.04):
                 ax.axvline(x, color="#f7c4c4", lw=0.4, zorder=0)
             for x in np.arange(0, len(raw_mv) / beat_fs + 1e-6, 0.20):

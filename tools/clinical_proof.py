@@ -96,6 +96,20 @@ def extract_records(records, data_dir, window_samples=720, lead=0):
     return (np.asarray(xs), np.asarray(ys), syms, sources, np.asarray(raws))
 
 
+def _robust_mv_ylim(ax, win):
+    """Set y-limits using 1st-99th percentile so a single artefact spike
+    doesn't squash the visible trace. Minimum visible span 1.5 mV."""
+    finite = win[np.isfinite(win)]
+    if finite.size:
+        p_lo = float(np.percentile(finite, 1))
+        p_hi = float(np.percentile(finite, 99))
+    else:
+        p_lo, p_hi = -0.75, 0.75
+    span = max(p_hi - p_lo, 1.5)
+    mid = 0.5 * (p_lo + p_hi)
+    ax.set_ylim(mid - span * 0.7, mid + span * 0.7)
+
+
 def render_blind_page(pdf, win, beat_id, fs=360):
     """Render a RAW-mV ECG window on standard pink ECG-paper grid -
     cardiologist marks judgment (no labels visible)."""
@@ -105,9 +119,7 @@ def render_blind_page(pdf, win, beat_id, fs=360):
     ax = axes[0]
     ax.plot(t, win, color="#000000", lw=1.4)
     ax.set_xlim(0, len(win) / fs)
-    mv_min, mv_max = float(win.min()), float(win.max())
-    pad = 0.5 * (mv_max - mv_min) if mv_max > mv_min else 0.5
-    ax.set_ylim(mv_min - pad * 0.2, mv_max + pad * 0.2)
+    _robust_mv_ylim(ax, win)
     for x in np.arange(0, len(win) / fs + 1e-6, 0.04):
         ax.axvline(x, color="#f7c4c4", lw=0.4, zorder=0)
     for x in np.arange(0, len(win) / fs + 1e-6, 0.20):
@@ -196,14 +208,21 @@ def main() -> int:
     p.add_argument("--calibration", default="models/mitbih_autoencoder_best.batchscale.calibration.json")
     p.add_argument("--data-dir", default="data/mitbih")
     p.add_argument("--records", default=",".join(MITBIH_RECORDS[:8]))
-    p.add_argument("--per-cell", type=int, default=4,
-                   help="examples per confusion-matrix cell")
+    p.add_argument("--per-cell", type=int, default=12,
+                   help="examples per confusion-matrix cell "
+                        "(4 cells -> 48 beats by default; needed for a "
+                        "kappa-usable blind worksheet)")
     p.add_argument("--out", default="docs/clinical_proof/clinical_proof.pdf")
     p.add_argument("--blind", action="store_true",
                    help="generate a blind version: hides the model's decision "
                         "and ground-truth so the cardiologist can label first, "
                         "then we compare with model + MIT-BIH labels afterwards")
     p.add_argument("--blind-out", default="docs/clinical_proof/clinical_blind.pdf")
+    p.add_argument("--blind-model-out",
+                   default="docs/clinical_proof/clinical_blind_model_results.pdf",
+                   help="companion PDF showing the model's decision for each "
+                        "blind beat in the SAME blind order, for post-meeting "
+                        "discussion of each disagreement")
     p.add_argument("--answer-key-out",
                    default="docs/clinical_proof/blind_answer_key.csv")
     args = p.parse_args()
@@ -347,6 +366,55 @@ def main() -> int:
                 ])
         print(f"Saved {blind_path}")
         print(f"Saved {key_path}  (do NOT show to the cardiologist)")
+
+        # Companion PDF: same beats, same blind order, with the model's
+        # reconstruction overlay + decision shown. For walking through
+        # disagreements together AFTER she has labelled the blind sheet.
+        companion_path = Path(args.blind_model_out)
+        companion_path.parent.mkdir(parents=True, exist_ok=True)
+        with PdfPages(companion_path) as pdf:
+            cover = plt.figure(figsize=(10, 6))
+            cover.text(0.5, 0.85,
+                       "Blind worksheet — model results companion",
+                       ha="center", fontsize=20, fontweight="bold")
+            cover.text(0.5, 0.78,
+                       f"{len(all_picked)} beats, SAME order as "
+                       f"clinical_blind.pdf",
+                       ha="center", fontsize=12)
+            cover.text(0.08, 0.65,
+                       "Use AFTER the cardiologist has marked her sheet.\n\n"
+                       "Each page corresponds to the matching beat number\n"
+                       "in clinical_blind.pdf and shows:\n"
+                       "  - the same 2-second window in z-scored space\n"
+                       "  - the model's reconstruction (orange overlay)\n"
+                       "  - the residual region (red shaded)\n"
+                       "  - the MIT-BIH ground-truth symbol + class\n"
+                       "  - the model's residual, threshold, and decision\n\n"
+                       "Outcome at top of each page:\n"
+                       "  TP = model caught a true anomaly\n"
+                       "  FN = model missed an anomaly\n"
+                       "  FP = model wrongly flagged a normal beat\n"
+                       "  TN = model correctly cleared a normal beat\n\n"
+                       "Walk through together; pause on every disagreement\n"
+                       "between her label and the model's decision.",
+                       va="top", fontfamily="monospace", fontsize=11)
+            pdf.savefig(cover); plt.close(cover)
+            for blind_id, original_idx in enumerate(order, start=1):
+                i = all_picked[original_idx]
+                truth_label = "ANOMALY" if y[i] == 1 else "NORMAL"
+                pred_label = "ANOMALY" if preds[i] == 1 else "NORMAL"
+                if truth_label == "ANOMALY" and pred_label == "ANOMALY":
+                    outcome = "TP"
+                elif truth_label == "ANOMALY" and pred_label == "NORMAL":
+                    outcome = "FN"
+                elif truth_label == "NORMAL" and pred_label == "ANOMALY":
+                    outcome = "FP"
+                else:
+                    outcome = "TN"
+                page_label = f"Beat #{blind_id}  -  {outcome}"
+                render_page(pdf, X[i], recons[i], residuals[i], threshold,
+                            page_label, syms[i], sources[i], pred_label)
+        print(f"Saved {companion_path}")
 
     return 0
 
