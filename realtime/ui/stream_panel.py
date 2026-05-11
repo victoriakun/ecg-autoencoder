@@ -18,6 +18,7 @@ from realtime.notifier import AnomalyEdge
 
 BUFFER_SECONDS = 10
 RED_BADGE_HOLD_MS = 3000  # min ms to keep red badge after a rising edge
+MAX_ANOMALY_REGIONS = 6   # most recent N rising-edge highlights kept on chart
 
 
 @dataclass
@@ -63,72 +64,115 @@ class StreamPanel(QWidget):
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(6, 4, 6, 4)
+        layout.setSpacing(4)
 
         header = QHBoxLayout()
         title = QLabel(
             f"Record {self._patient_id} — single-lead ECG (MLII)"
         )
-        title.setStyleSheet("font-weight: bold; font-size: 13pt;")
+        title.setStyleSheet("font-weight: bold; font-size: 12pt;")
         header.addWidget(title)
         self._clock_label = QLabel("t = --:--")
         self._clock_label.setStyleSheet(
-            "color: #555; font-family: monospace; font-size: 11pt;"
+            "color: #555; font-family: monospace; font-size: 10pt;"
         )
-        header.addSpacing(12)
+        header.addSpacing(10)
         header.addWidget(self._clock_label)
         header.addStretch()
         self._status = QLabel("● WARMUP")
-        f = QFont(); f.setPointSize(14); f.setBold(True)
+        f = QFont(); f.setPointSize(12); f.setBold(True)
         self._status.setFont(f)
-        self._status.setStyleSheet("color: grey; padding: 4px 10px;")
+        self._status.setStyleSheet("color: grey; padding: 2px 8px;")
+        # Tooltip explains the four states the cardiologist will see.
+        self._status.setToolTip(
+            "<b>Status</b>:<br>"
+            "&bull; <b>WARMUP</b> — collecting baseline statistics, no decisions yet.<br>"
+            "&bull; <b>NORMAL</b> — reconstruction error below threshold.<br>"
+            "&bull; <b>WATCHING</b> — one window over threshold; waiting for "
+            "confirmation (2 of last 3 windows must exceed before alerting).<br>"
+            "&bull; <b>ANOMALY</b> — alert fired and being held for "
+            f"{RED_BADGE_HOLD_MS//1000} s after the rising edge."
+        )
         header.addWidget(self._status)
         layout.addLayout(header)
 
+        # Compact one-line explanation; full version is in the README.
         explanation = QLabel(
-            "<b>Top plot:</b> the most recent 10 s of streamed ECG. "
-            "Blue = preprocessed signal (band-pass + global z-score, so "
-            "y-axis is in standard deviations). "
-            "Orange = the autoencoder's reconstruction. "
-            "<b>Bottom plot:</b> reconstruction error (residual) of every "
-            "2-s window vs the dashed red threshold. An "
-            "alert fires only when 2 of the last 3 windows exceed the threshold."
+            "Blue = ECG (z-scored) · orange = AE reconstruction · "
+            "bottom = p99 score vs dashed-red threshold (alert when 2 of last 3 windows exceed)."
         )
-        explanation.setWordWrap(True)
-        explanation.setStyleSheet("color: #444; font-size: 10pt;")
+        explanation.setWordWrap(False)
+        explanation.setStyleSheet("color: #555; font-size: 9pt;")
         layout.addWidget(explanation)
 
         self._alert_banner = QLabel("")
         self._alert_banner.setAlignment(Qt.AlignCenter)
-        self._alert_banner.setFont(f)
+        ab_font = QFont(); ab_font.setPointSize(11); ab_font.setBold(True)
+        self._alert_banner.setFont(ab_font)
         self._alert_banner.setStyleSheet(
-            "background: transparent; color: transparent; padding: 6px;"
+            "background: transparent; color: transparent; padding: 2px;"
         )
-        self._alert_banner.setFixedHeight(34)
+        self._alert_banner.setMaximumHeight(24)
+        self._alert_banner.setMinimumHeight(0)
         layout.addWidget(self._alert_banner)
 
         self._banner_timer = QTimer(self)
         self._banner_timer.setSingleShot(True)
         self._banner_timer.timeout.connect(self._clear_banner)
 
-        self._raw_plot = pg.PlotWidget(title="ECG (z-scored): blue = original, orange = model reconstruction")
-        self._raw_plot.setLabel("left", "amplitude (σ, z-scored)")
-        self._raw_plot.setLabel("bottom", "time within visible window (s)")
-        self._raw_curve = self._raw_plot.plot(pen=pg.mkPen("#1f77b4"))
-        self._recon_curve = self._raw_plot.plot(pen=pg.mkPen("#ff7f0e"))
+        # Constrain plot heights so both ECG and residual fit on a typical
+        # 800-px-tall window without scrolling.
+        AXIS_PEN = pg.mkPen("#222222", width=1)
+        TEXT_PEN = pg.mkPen("#222222")
+
+        def _style_plot(plot: pg.PlotWidget) -> None:
+            """White background + dark axes — readable in screenshots."""
+            plot.setBackground("w")
+            for axis_name in ("left", "bottom", "top", "right"):
+                ax = plot.getAxis(axis_name)
+                ax.setPen(AXIS_PEN)
+                ax.setTextPen(TEXT_PEN)
+            plot.showGrid(x=False, y=True, alpha=0.25)
+
+        self._raw_plot = pg.PlotWidget(title="ECG (z-scored): blue = original, orange = reconstruction")
+        _style_plot(self._raw_plot)
+        self._raw_plot.setLabel("left", "amplitude (σ)")
+        self._raw_plot.setLabel("bottom", "time (s)")
+        self._raw_plot.setMinimumHeight(180)
+        self._raw_plot.setMaximumHeight(360)
+        self._raw_curve = self._raw_plot.plot(pen=pg.mkPen("#1f77b4", width=1.6))
+        self._recon_curve = self._raw_plot.plot(pen=pg.mkPen("#ff7f0e", width=1.6))
         self._anomaly_regions: list = []
-        layout.addWidget(self._raw_plot)
+        layout.addWidget(self._raw_plot, stretch=3)
 
         self._res_plot = pg.PlotWidget(
-            title="Reconstruction error per 2-s window (one point every 0.5 s)"
+            title="Anomaly score per beat-centred 2-s window  (p99 = 99th "
+                  "percentile of the per-sample squared reconstruction error)"
         )
-        self._res_plot.setLabel("left", "MSE between original and reconstruction")
-        self._res_plot.setLabel("bottom", "window index (most recent on the right)")
-        self._res_curve = self._res_plot.plot(pen=pg.mkPen("#555555"))
+        _style_plot(self._res_plot)
+        self._res_plot.setLabel("left", "p99 score")
+        self._res_plot.setLabel("bottom", "window index (newest on the right)")
+        self._res_plot.setToolTip(
+            "<b>Anomaly score = p99</b> (99th percentile of the per-sample "
+            "squared reconstruction error) of the trained autoencoder, "
+            "computed for every beat-centred 2-second window. The dashed red "
+            "line is the calibrated decision threshold τ = 0.3096 (95%-"
+            "sensitivity operating point on the test split). When 2 of the "
+            "last 3 windows exceed the threshold the system enters the "
+            "ANOMALY state."
+        )
+        self._res_plot.setMinimumHeight(120)
+        self._res_plot.setMaximumHeight(220)
+        # Dark blue, thick — readable on white in a screenshot
+        self._res_curve = self._res_plot.plot(pen=pg.mkPen("#1f3d6e", width=2.0))
+        # Threshold: solid red, thick dashed line — high contrast against the curve
         self._thr_line = pg.InfiniteLine(
-            angle=0, pen=pg.mkPen("#d62728", style=Qt.DashLine)
+            angle=0,
+            pen=pg.mkPen("#d62728", width=2.0, style=Qt.DashLine),
         )
         self._res_plot.addItem(self._thr_line)
-        layout.addWidget(self._res_plot)
+        layout.addWidget(self._res_plot, stretch=2)
 
     def _clear_banner(self) -> None:
         self._alert_banner.setText("")
@@ -192,6 +236,24 @@ class StreamPanel(QWidget):
             )
             self._raw_plot.addItem(region)
             self._anomaly_regions.append(region)
+            # Cap as a safety net — if anomaly_end never arrives (e.g.
+            # the buffer empties), we still won't fill the chart with red.
+            while len(self._anomaly_regions) > MAX_ANOMALY_REGIONS:
+                old = self._anomaly_regions.pop(0)
+                try:
+                    self._raw_plot.removeItem(old)
+                except Exception:  # pragma: no cover - defensive
+                    pass
+        elif edge.event_type == "anomaly_end":
+            # Falling edge: remove the most-recent (still-displayed) region
+            # so the chart returns to its calm state once the episode ends.
+            # Push/pop pairing keeps overlapping episodes correct.
+            if self._anomaly_regions:
+                old = self._anomaly_regions.pop()
+                try:
+                    self._raw_plot.removeItem(old)
+                except Exception:  # pragma: no cover - defensive
+                    pass
             ts = edge.ts_utc.split("T")[-1][:12] if "T" in edge.ts_utc else edge.ts_utc
             self._alert_banner.setText(
                 f"⚠  ANOMALY DETECTED  rec {edge.patient_id} "

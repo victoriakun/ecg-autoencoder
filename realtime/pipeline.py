@@ -140,6 +140,24 @@ class Pipeline:
             float(result.record_offset_samples) / float(self._cfg.sampling_rate)
             if hasattr(result, "record_offset_samples") else None
         )
+        # On rising edges we persist the exact 720-sample window that fired
+        # the alert plus the model's reconstruction of that window AND the
+        # index of the per-sample peak error, so the cardiologist can review
+        # the alert later in the UI with the original-vs-reconstruction
+        # overlay required by the system-design chapter.
+        waveform = None
+        reconstruction = None
+        peak_idx = None
+        if event_type == "anomaly_start" and result.raw is not None:
+            try:
+                import numpy as np
+                waveform = np.asarray(result.raw, dtype=np.float32)
+                reconstruction = np.asarray(result.recon, dtype=np.float32)
+                err = (waveform - reconstruction) ** 2
+                peak_idx = int(err.argmax())
+            except Exception as e:  # pragma: no cover - defensive
+                log.warning("could not compute peak index for anomaly: %s", e)
+                waveform, reconstruction, peak_idx = None, None, None
         ev = AnomalyEvent(
             patient_id=d.patient_id,
             event_type=event_type,
@@ -149,6 +167,9 @@ class Pipeline:
             threshold_mode=self._cfg.threshold_mode,
             model_version=self._model_version,
             record_offset_seconds=offset_seconds,
+            waveform=waveform,
+            reconstruction=reconstruction,
+            peak_sample_index=peak_idx,
         )
         self._store.queue_event(ev)
         if event_type == "anomaly_start":

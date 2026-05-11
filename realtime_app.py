@@ -119,7 +119,8 @@ def _run_gui(cfg: RealtimeConfig) -> int:
             pipeline.stop()
             pipeline = None
 
-    window = MainWindow(cfg, signals, on_start=on_start, on_stop=on_stop)
+    window = MainWindow(cfg, signals, on_start=on_start, on_stop=on_stop,
+                        event_store=store)
     window.resize(1000, 800)
     window.show()
     try:

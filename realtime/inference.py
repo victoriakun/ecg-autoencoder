@@ -114,7 +114,7 @@ class InferenceWorker:
             with torch.no_grad():
                 recon_t = self._model(x)
             recon = recon_t.squeeze(0).cpu().numpy().astype(float)
-            residual = float(np.mean((pre - recon) ** 2))
+            residual = float(np.percentile((pre - recon) ** 2, 99))
             self._out.put(
                 InferenceResult(
                     patient_id=win.patient_id,
