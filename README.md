@@ -36,7 +36,7 @@ ecg_ae_project/
 ├── realtime_app.py           # Real-time pipeline entry point
 ├── tools/                    # Calibration, clinical proof, evaluation utilities
 ├── tests/                    # Unit and integration tests
-└── docs/                     # Diagrams and clinical proof artifacts
+└── docs/                     # Clinical proof artifacts and external evaluation results
 ```
 
 ## Installation
