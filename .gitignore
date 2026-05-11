@@ -28,6 +28,12 @@ models/*.pt
 # Archive folder
 archive/
 
+# Local-only bundle (thesis drafts, submission PDFs/PPTX/MD scratch) — not for GitHub
+_local_archive/
+
+# Pytest cache
+.pytest_cache/
+
 # macOS system files
 .DS_Store
 
