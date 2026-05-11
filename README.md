@@ -8,11 +8,18 @@ This project implements an autoencoder-based approach to detect cardiac arrhythm
 
 ## Results
 
-- **ROC-AUC**: 97.21%
-- **Accuracy**: 94.59%
-- **Sensitivity**: 90.19%
-- **Specificity**: 95.51%
-- **F1-Score**: 85.14%
+Evaluated on the held-out MIT-BIH test split (16,407 windows: 13,594 normal, 2,813 anomalies):
+
+| Metric | Value |
+|---|---|
+| ROC-AUC | **0.9750** |
+| PR-AUC | 0.8455 |
+| Sensitivity (Recall) | 0.9499 |
+| Specificity | 0.9305 |
+| Precision | 0.7387 |
+| F1-Score | 0.8311 |
+
+**Deployed operating point:** τ = 0.3096, chosen to yield 95% sensitivity on the held-out test split — favouring clinical sensitivity over precision. Full calibration record in `models/mitbih_autoencoder_best.calibration.json`.
 
 ## Project Structure
 
@@ -25,7 +32,11 @@ ecg_ae_project/
 ├── train_mitbih.py           # Main training script
 ├── evaluate.py               # Evaluation metrics
 ├── visualize.py              # Visualization tools
-└── evaluation_plots/         # Generated evaluation figures
+├── realtime/                 # Real-time pipeline package (inference, UI, event store)
+├── realtime_app.py           # Real-time pipeline entry point
+├── tools/                    # Calibration, clinical proof, evaluation utilities
+├── tests/                    # Unit and integration tests
+└── docs/                     # Diagrams and clinical proof artifacts
 ```
 
 ## Installation
@@ -77,9 +88,11 @@ The convolutional autoencoder consists of:
 
 - **Database**: MIT-BIH Arrhythmia Database (48 records, ~110,000 beats)
 - **Sampling Rate**: 360 Hz
-- **Window Size**: 2 seconds (720 samples)
+- **Window Size**: 2 seconds (720 samples), beat-centered
 - **Split**: 70% train, 15% validation, 15% test
 - **Training**: Normal beats only (unsupervised learning)
+- **Anomaly score**: p99 of per-sample squared residuals
+- **Normalisation**: record-level z-score
 
 ## Real-time pipeline
 
@@ -110,8 +123,18 @@ python realtime_app.py --config my_config.json
 
 ### Architecture
 
-Documented in `docs/superpowers/specs/2026-04-18-realtime-ecg-pipeline-design.md`.
-Each module in `realtime/` maps to a thesis Section 3.1.* subsection.
+Each module in `realtime/` maps to a thesis Section 3.1.* subsection: signal ingest, scoring, dynamic thresholding, N-of-M smoothing, event store, and the PyQt UI.
+
+## Clinical proof generation
+
+Re-generate the cardiologist-blind PDFs used for external validation:
+
+```bash
+python tools/clinical_proof.py             # Anonymised blind set + answer key
+python tools/clinical_examples_by_type.py  # Examples by arrhythmia type
+```
+
+Outputs land in `docs/clinical_proof/`.
 
 ## License
 
