@@ -1,0 +1,28 @@
+{
+  "method": "p99-of-residuals + global-record z-score (matches Chapter 6 batch)",
+  "records_used": [
+    "100",
+    "101",
+    "103",
+    "105",
+    "108",
+    "109",
+    "111",
+    "112",
+    "113",
+    "115"
+  ],
+  "n_windows": 35901,
+  "n_anomalies": 236,
+  "p99": 0.720570253818432,
+  "threshold_95_sensitivity": 0.720570253818432,
+  "threshold_f1_optimal": 18.234597597600427,
+  "threshold_p99_normals": 14.627482147450209,
+  "roc_auc": 0.5482094442873537,
+  "f1_at_optimal": 0.07357859531739315,
+  "score_normal_mean": 5.189085714926621,
+  "score_anomaly_mean": 6.8957135633556845,
+  "score_normal_p50": 4.712071318074629,
+  "score_anomaly_p50": 5.213971512643367,
+  "fixed_threshold_choice": "95%-sensitivity (Chapter 6 deployed operating point)"
+}
